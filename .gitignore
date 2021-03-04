@@ -2,6 +2,10 @@
 URL Classification.csv
 webkb/
 
+phishing-other/
+phishing_dataset.csv
+benign_dataset.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
