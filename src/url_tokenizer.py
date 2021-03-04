@@ -53,12 +53,12 @@ def url_raw_splitter(url: str) -> Tuple[str]:
     '''
     # RegEx partly based on https://stackoverflow.com/a/3809435/9248793
     url_regex = re.compile(r'''
-        (https?):\/\/                                  # http s
-        ([-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]{1,6})  # domains
+        (https?):\/\/                                   # http s
+        ([-a-zA-Z0-9@:%._\+~#=]+\.[a-zA-Z0-9()]{1,12})  # domains
         \b
-        ([-a-zA-Z0-9()@:%_\+;.~#&//=]*)                # path
+        ([-a-zA-Z0-9()@:%_\+;.~#&//=]*)                 # path
         \??
-        ([-a-zA-Z0-9()@:%_\+;.~#&//=?]*)               # args
+        ([-a-zA-Z0-9()@:%_\+;.~#&//=?]*)                # args
     ''', re.DOTALL | re.VERBOSE)
     match = url_regex.match(url)
     assert match, f'Error matching url: {url}'
