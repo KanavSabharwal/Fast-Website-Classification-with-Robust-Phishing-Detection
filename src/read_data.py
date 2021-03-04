@@ -84,7 +84,21 @@ def read_all_datasets(use_sample=False) -> Tuple[pd.DataFrame]:
     in the form of DataFrames
     '''
     return (
-        read_dmoz(use_sample),
-        read_phishing(use_sample),
-        read_ilp(use_sample)
+        read_dmoz(use_sample=use_sample),
+        read_phishing(use_sample=use_sample),
+        read_ilp(use_sample=use_sample)
     )
+
+def read_concat_datasets(use_sample=False) -> pd.DataFrame:
+    '''
+    Reads all the datasets and returns a single DataFrame consiting of all of
+    them
+    '''
+    dmoz, phishing, ilp = read_all_datasets(use_sample=use_sample)
+    ilp = ilp[['idx', 'url', 'label']]
+
+    dmoz['dataset'] = 'dmoz'
+    phishing['dataset'] = 'phishing'
+    ilp['dataset'] = 'ilp'
+    concatted = pd.concat([dmoz, phishing, ilp])
+    return concatted
