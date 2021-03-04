@@ -1,12 +1,31 @@
+from typing import Tuple
 from os import listdir
-from os.path import isdir, join
+from os.path import isdir, join, dirname, abspath
 import pandas as pd
+import numpy as np
 
-
-DATA_DIR = 'data'
+CUR_DIR = dirname(abspath(__file__))
+DATA_DIR = join(CUR_DIR, 'data')
 DMOZ_DIR = join(DATA_DIR, 'dmoz')
 WEBKB_DIR = join(DATA_DIR, 'webkb')
+PHISHING_DIR = join(DATA_DIR, 'phishing')
+
 DMOZ_BASE_FILENAME = 'URL Classification'
+PHISHING_BASE_FILENAME = 'phishing_dataset'
+BENIGN_BASE_FILENAME = 'benign_dataset'
+
+def is_valid(url_to_test) -> bool:
+    '''Checks whether a given url seems to be a valid url'''
+    return type(url_to_test) is str and url_to_test.startswith('http')
+
+
+def filter_invalid_rows(df: pd.DataFrame) -> pd.DataFrame:
+    '''
+    Checks for all rows whether they contain an invalid url and filters away
+    those that are invalid
+    '''
+    valid_indices = df['url'].apply(is_valid)
+    return df[valid_indices]
 
 
 def read_dmoz(use_sample=False) -> pd.DataFrame:
@@ -15,8 +34,27 @@ def read_dmoz(use_sample=False) -> pd.DataFrame:
     filename = f'{DMOZ_BASE_FILENAME}{sample}.csv'
     filedir = join(DMOZ_DIR, filename)
     df = pd.read_csv(filedir, names=['idx', 'url', 'label'])
-    return df
+    return filter_invalid_rows(df)
 
+
+def read_phishing(use_sample=False) -> pd.DataFrame:
+    '''Reads the phishing dataset and returns it as a DataFrame'''
+    sample = '_sample' if use_sample else ''
+
+    p_filename = f'{PHISHING_BASE_FILENAME}{sample}.csv'
+    p_filedir = join(PHISHING_DIR, p_filename)
+    phishing_df = pd.read_csv(p_filedir, names=['url'])
+    phishing_df['label'] = 'phishing'
+
+    b_filename = f'{BENIGN_BASE_FILENAME}{sample}.csv'
+    b_filedir = join(PHISHING_DIR, b_filename)
+    benign_df = pd.read_csv(b_filedir, names=['url'])
+    benign_df['label'] = 'benign'
+
+    df = pd.concat([phishing_df, benign_df])
+    df.insert(0, 'idx', np.arange(len(df)))
+
+    return filter_invalid_rows(df)
 
 
 def read_ilp(use_sample=False) -> pd.DataFrame:
@@ -36,10 +74,17 @@ def read_ilp(use_sample=False) -> pd.DataFrame:
                 replaced_url = url.replace('^', '/')
                 data.append([idx, replaced_url, label, uni])
                 idx += 1
-    return pd.DataFrame(data, columns=['idx', 'url', 'label', 'uni'])
+    df = pd.DataFrame(data, columns=['idx', 'url', 'label', 'uni'])
+    return filter_invalid_rows(df)
 
 
-def read_phishing(use_sample=False) -> pd.DataFrame:
-    '''Reads the phishing dataset and returns it as a DataFrame'''
-    # TODO: Implement this
-    pass
+def read_all_datasets(use_sample=False) -> Tuple[pd.DataFrame]:
+    '''
+    Reads the datasets and returns a 3-tuple of datasets (DMOZ, Phishing, ILP)
+    in the form of DataFrames
+    '''
+    return (
+        read_dmoz(use_sample),
+        read_phishing(use_sample),
+        read_ilp(use_sample)
+    )
