@@ -1,6 +1,6 @@
 import pytest
 from url_tokenizer import url_raw_splitter, url_domains_handler, \
-                          url_path_handler, url_args_handler, word_expander
+                          url_path_handler, url_args_handler
 
 
 class TestUrlRawSplitter:
@@ -38,7 +38,7 @@ class TestUrlDomainsHandler:
         assert len(vals) == 3
         sub_domains, main_domain, domain_ending = vals
         assert sub_domains == []
-        assert main_domain == 'site'
+        assert main_domain == ['site']
         assert domain_ending == 'com'
 
     def test_basic_domain(self):
@@ -46,15 +46,23 @@ class TestUrlDomainsHandler:
         assert len(vals) == 3
         sub_domains, main_domain, domain_ending = vals
         assert sub_domains == ['www']
-        assert main_domain == 'site'
+        assert main_domain == ['site']
         assert domain_ending == 'com'
 
     def test_many_subdomains(self):
         vals = url_domains_handler('rpo.library.part8.site.com')
         assert len(vals) == 3
         sub_domains, main_domain, domain_ending = vals
-        assert sub_domains == ['rpo', 'library', 'part8']
-        assert main_domain == 'site'
+        assert sub_domains == ['rpo', 'library', 'part', '8']
+        assert main_domain == ['site']
+        assert domain_ending == 'com'
+
+    def test_many_subdomains_splitted_main(self):
+        vals = url_domains_handler('rpo.library.part8.geocities.com')
+        assert len(vals) == 3
+        sub_domains, main_domain, domain_ending = vals
+        assert sub_domains == ['rpo', 'library', 'part', '8']
+        assert main_domain == ['geo', 'cities']
         assert domain_ending == 'com'
 
 
@@ -69,8 +77,12 @@ class TestUrlPathHandler:
         assert url_path_handler('/test/') == ['test']
 
     def test_basic_path(self):
-        assert url_path_handler('/some/long/path/with/weird/2783/*23') ==\
-            ['some', 'long', 'path', 'with', 'weird', '2783', '*23']
+        assert url_path_handler('/some/long/path/with/weird/2783/23') == \
+            ['some', 'long', 'path', 'with', 'weird', '2783', '23']
+
+    def test_path_multiword(self):
+        assert url_path_handler('/some/mediumlengthpath/') == \
+            ['some', 'medium', 'length', 'path']
 
 
 class TestUrlArgsHandler:
@@ -79,32 +91,19 @@ class TestUrlArgsHandler:
 
     def test_single(self):
         args = url_args_handler('sid=4')
-        assert args == [('sid', '4')]
+        assert args == [(['sid'], ['4'])]
 
     def test_multiple(self):
         args = url_args_handler('sid=4&amp;ring=hent&amp;id=2')
-        assert args == [('sid', '4'), ('ring', 'hent'), ('id', '2')]
+        assert args == [(['sid'], ['4']), (['ring'], ['hent']),
+                        (['id'], ['2'])]
 
-    def test_multiple_with_none(self):
+    def test_multiple_with_empty(self):
         args = url_args_handler('sid=4&amp;ring=hent&amp;id=2&amp;list')
-        assert args == [('sid', '4'), ('ring', 'hent'), ('id', '2'), ('list', None)]
+        assert args == [(['sid'], ['4']), (['ring'], ['hent']),
+                        (['id'], ['2']), (['list'], [])]
 
-
-# TODO: Add these tests again once function has been implemented
-# class TestWordExpander:
-#     def test_empty(self):
-#         assert word_expander('') == []
-
-#     def test_keep_word(self):
-#         assert word_expander('women') == ['women']
-
-#     def test_dashes(self):
-#         assert word_expander('a-test-case') == ['a', 'test', 'case']
-
-#     def test_expand_common(self):
-#         assert word_expander('entityid') == ['entity', 'id']
-#         assert word_expander('newchurch') == ['new', 'church']
-
-#     def test_expand_rare(self):
-#         assert word_expander('animaladventures') == ['animal', 'adventures']
-#         assert word_expander('factmonster') == ['fact', 'monster']
+    def test_multiword(self):
+        args = url_args_handler('amultiwordparam=multiwordvalue')
+        assert args == [(['a', 'multi', 'word', 'param'],
+                         ['multi', 'word', 'value'])]

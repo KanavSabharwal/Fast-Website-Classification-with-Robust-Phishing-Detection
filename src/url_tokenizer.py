@@ -1,15 +1,47 @@
 import re
 import html
-from typing import List, Tuple
+from typing import List, Tuple, Any
+import wordninja
+import itertools
 
 
-DomainData = Tuple[List[str], str, str]
+DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
 UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
-
+MIN_SPLIT_LEN = 4
 
 # TODO: We should also handle HTML Encodings like %20 etc.
 # We may use something like html.unescape('&pound;682m') for this
+
+
+def flatten(lst_lst: List[List[Any]]) -> List[Any]:
+    '''
+    Takes a list of lists of any type and flattens it to a single list
+
+    Args:
+        lst_lst (List[List[Any]]): List of lists
+
+    Returns:
+        lst (List[Any]): Flattened (1D) list
+    '''
+    return list(itertools.chain(*lst_lst))
+
+
+def word_splitter(text: str) -> List[str]:
+    '''
+    Splits a string into multiple words mainly using wordninja, but keeps
+    the string as it is if is shorter than or equal to the MIN_SPLIT_LEN
+
+    Args:
+        text (str): The string of text to split
+
+    Returns:
+        lst (List[str]): List of tokenized words
+    '''
+    if text:
+        return [text] if len(text) <= MIN_SPLIT_LEN else wordninja.split(text)
+    else:
+        return []
 
 
 def url_tokenizer(url: str) -> UrlData:
@@ -23,7 +55,8 @@ def url_tokenizer(url: str) -> UrlData:
     Returns:
         protocol (str): Protocol, http or https
         domains (DomainData): A tuple consisting of a list of the sub-domains,
-                              the main domain and the domain ending
+                              list of the main domain tokenized and the domain
+                              ending
         path (List[str]): A list of the tokens in the path
         args (List[ParamValPair]): A list of the corresponding parameters
                                    and values in the URL
@@ -68,25 +101,25 @@ def url_raw_splitter(url: str) -> Tuple[str]:
 
 def url_domains_handler(url_domains: str) -> DomainData:
     '''
-    Splits the domain part of the URL to individual tokens and returns the
+    Splits the domain part of the URL to individual tokens
 
     Args:
         url_domains (str): Domains part of url of webpage
 
     Returns:
         sub_domains (List[str]): List of subdomains, i.e. ['www', 'blog']
-        main_domain (str): Main domain, i.e. 'google'
+        main_domain (List[str]): Main domain, i.e. ['geo', 'cities']
         domain_ending (str): The domain ending, i.e. 'com' or 'net'
 
     Examples:
-        >>> url_domains_handler('google.com')
-        ([], 'google', 'com')
+        >>> url_domains_handler('geocities.com')
+        ([], ['geo', 'cities'], 'com')
         >>> url_domains_handler('www.members.tripod.net')
-        (['www', 'members'], 'tripod', 'net')
+        (['www', 'members'], ['tripod'], 'net')
     '''
     splitted = url_domains.split('.')
-    sub_domains = splitted[:-2]
-    main_domain = splitted[-2]
+    sub_domains = flatten([word_splitter(w) for w in splitted[:-2]])
+    main_domain = word_splitter(splitted[-2])
     domain_ending = splitted[-1]
     return (sub_domains, main_domain, domain_ending)
 
@@ -103,12 +136,12 @@ def url_path_handler(url_path: str) -> List[str]:
 
     Examples:
         >>> url_path_handler('/path1/path2/page.html')
-        ['path1', 'path2', 'page.html']
+        ['path', '1', 'path', '2', 'page', 'html']
         >>> url_path_handler('/')
         []
     '''
-    paths = [token for token in url_path.split('/') if token]
-    return paths
+    return flatten([word_splitter(token) for token in url_path.split('/')
+                    if token])
 
 
 def url_args_handler(url_args: str) -> List[ParamValPair]:
@@ -119,14 +152,15 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
         url_args (str): Parameter part of url of webpage
 
     Returns:
-        paths (ParamValPair): List of param-val pairs as tuple. If no val is
-                              given, the second value in the tuple is None
+        paths (ParamValPair): List of param-val pairs as 2tuple of lists. If no
+                              val is given, the second value in the tuple is
+                              the empty list []
 
     Examples:
         >>> url_args_handler('sid=4')
         [('sid', '4')]
-        >>> url_args_handler('sid=4&amp;ring=hent&amp;id=2&amp;list')
-        [('sid', '4'), ('ring', 'hent'), ('id', '2'), ('list', None)]
+        >>> url_args_handler('sid=4&amp;ring=hent&amp;list')
+        [(['sid'], ['4']), (['ring'], ['hent']), (['list'], [])]
         >>> url_args_handler('')
         []
     '''
@@ -136,31 +170,7 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
     pair_list = []
     for pair in url_args.split('&amp;'):
         splitted = pair.split('=')
-        param_arg = (splitted[0], None) if len(splitted) == 1 else tuple(splitted)
-        pair_list.append(param_arg)
+        param, val = (splitted[0], '') if len(splitted) == 1 else splitted
+        param_val_tup = (word_splitter(param), word_splitter(val))
+        pair_list.append(param_val_tup)
     return pair_list
-
-
-def word_expander(text: str) -> List[str]:
-    '''
-    Takes a string of text that may contain concatenated words and tries to
-    expand it to a list of separate tokens.
-
-    Args:
-        text (str): Text to process
-
-    Returns:
-        tokens (List[str]): List of tokenized words
-
-    Examples:
-        >>> word_expander('animaladventures')
-        ['animal', 'adventures']
-        >>> word_expander('women')
-        ['women']
-    '''
-    # TODO: Implement this
-    if len(text) == 0:
-        return []
-
-    tokens = [text]
-    return tokens
