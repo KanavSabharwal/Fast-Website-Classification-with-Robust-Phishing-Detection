@@ -1,47 +1,15 @@
 import re
-import html
-from typing import List, Tuple, Any
-import wordninja
-import itertools
+from typing import List, Tuple
 
+from util import flatten, word_splitter
+
+# TODO: We should also handle HTML Encodings like %20 etc.
+# We may use something like html.unescape('&pound;682m') for this
+# import html
 
 DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
 UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
-MIN_SPLIT_LEN = 4
-
-# TODO: We should also handle HTML Encodings like %20 etc.
-# We may use something like html.unescape('&pound;682m') for this
-
-
-def flatten(lst_lst: List[List[Any]]) -> List[Any]:
-    '''
-    Takes a list of lists of any type and flattens it to a single list
-
-    Args:
-        lst_lst (List[List[Any]]): List of lists
-
-    Returns:
-        lst (List[Any]): Flattened (1D) list
-    '''
-    return list(itertools.chain(*lst_lst))
-
-
-def word_splitter(text: str) -> List[str]:
-    '''
-    Splits a string into multiple words mainly using wordninja, but keeps
-    the string as it is if is shorter than or equal to the MIN_SPLIT_LEN
-
-    Args:
-        text (str): The string of text to split
-
-    Returns:
-        lst (List[str]): List of tokenized words
-    '''
-    if text:
-        return [text] if len(text) <= MIN_SPLIT_LEN else wordninja.split(text)
-    else:
-        return []
 
 
 def url_tokenizer(url: str) -> UrlData:
@@ -93,7 +61,7 @@ def url_raw_splitter(url: str) -> Tuple[str]:
         \??
         ([-a-zA-Z0-9()@:%_\+;.~#&//=?]*)                # args
     ''', re.DOTALL | re.VERBOSE)
-    match = url_regex.match(url)
+    match = url_regex.match(url.lower())
     assert match, f'Error matching url: {url}'
     raw_values = match.groups()
     return raw_values
@@ -168,8 +136,8 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
         return []
 
     pair_list = []
-    for pair in url_args.split('&amp;'):
-        splitted = pair.split('=')
+    for pair in re.split(r'(?:&amp;)|;|&', url_args):
+        splitted = pair.split('=')[:2]
         param, val = (splitted[0], '') if len(splitted) == 1 else splitted
         param_val_tup = (word_splitter(param), word_splitter(val))
         pair_list.append(param_val_tup)
