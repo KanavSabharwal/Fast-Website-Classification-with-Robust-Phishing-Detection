@@ -285,10 +285,6 @@ class UrlFeaturizer:
             feat_vec_word_mat (Union[VectorMatrix, List[VectorMatrix]]): Either
                 tuple of (features_vec, word_matrix) if a single URL is
                 supplied or a list of these tuples if list of URLS is supplied
-
-            vec (np.ndarray): 1D vector of hand-picked features
-            word_matrix (np.ndarray): Full word embedding matrix of shape
-                                      (N, embedding_dim)
         '''
         if isinstance(urls, str):
             feat_vec_word_mat = self.__featurize__(urls)
