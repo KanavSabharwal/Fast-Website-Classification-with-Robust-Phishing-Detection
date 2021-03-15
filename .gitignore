@@ -6,6 +6,10 @@ phishing-other/
 phishing_dataset.csv
 benign_dataset.csv
 
+# Word embeddings
+numberbatch-19.08.txt
+glove.42B.300d.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
