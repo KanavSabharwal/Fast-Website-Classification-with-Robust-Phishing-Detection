@@ -1,7 +1,8 @@
-import os
 import csv
 import re
 from time import time
+import os
+from os.path import dirname, abspath
 from typing import Dict, List, Tuple, Union
 
 from util import flatten_twice
@@ -23,7 +24,8 @@ UNTRUSTWORTHY_TLDS = set(['xyz', 'biz', 'info'])
 
 # These values should not be changed
 GLOVE, CONCEPTNET = 'glove', 'conceptnet'
-WORD_EMBED_PATH = os.path.join('.', 'word_embed')
+CUR_DIR = dirname(abspath(__file__))
+WORD_EMBED_PATH = os.path.join(CUR_DIR, 'word_embed')
 GLOVE_FILE = os.path.join(WORD_EMBED_PATH, GLOVE, 'glove.42B.300d.txt')
 CONCEPTNET_FILE = os.path.join(WORD_EMBED_PATH, CONCEPTNET, 'numberbatch-19.08.txt')
 
