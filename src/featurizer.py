@@ -23,11 +23,12 @@ TRUSTWORTHY_TLDS = set(['com', 'net', 'edu', 'org', 'gov'])
 UNTRUSTWORTHY_TLDS = set(['xyz', 'biz', 'info'])
 
 # These values should not be changed
-GLOVE, CONCEPTNET = 'glove', 'conceptnet'
+GLOVE, CONCEPTNET, SAMPLE = 'glove', 'conceptnet', 'sample'
 CUR_DIR = dirname(abspath(__file__))
 WORD_EMBED_PATH = os.path.join(CUR_DIR, 'word_embed')
 GLOVE_FILE = os.path.join(WORD_EMBED_PATH, GLOVE, 'glove.42B.300d.txt')
 CONCEPTNET_FILE = os.path.join(WORD_EMBED_PATH, CONCEPTNET, 'numberbatch-19.08.txt')
+SAMPLE_FILE = os.path.join(WORD_EMBED_PATH, SAMPLE, 'sample.txt')
 
 
 class UrlFeaturizer:
@@ -88,7 +89,8 @@ class UrlFeaturizer:
         as key and the word embedding as the value
 
         Args:
-            embedding (str): String, should be "glove" or "conceptnet"
+            embedding (str): String, should be one of "glove", "conceptnet",
+                             "sample".
 
         Returns:
             embedding (EmbeddingIndex): A string-vector dictionary of the
@@ -98,9 +100,11 @@ class UrlFeaturizer:
             return self.__read_conceptnet_embeddings__()
         elif embedding == GLOVE:
             return self.__read_glove_embeddings__()
+        elif embedding == SAMPLE:
+            return self.__read_sample_embeddings__()
         else:
             msg = f'{embedding} is not a valid embedding choice. ' + \
-                  f'Try one of {[CONCEPTNET, GLOVE]}'
+                  f'Try one of {[CONCEPTNET, GLOVE, SAMPLE]}'
             raise ValueError(msg)
 
     def __read_conceptnet_embeddings__(self) -> EmbeddingIndex:
@@ -137,6 +141,25 @@ class UrlFeaturizer:
         if self.verbose:
             print('Reading the GloVe word vector file...')
         words_df = pd.read_csv(GLOVE_FILE, sep=" ", index_col=0,
+                               na_values=None, keep_default_na=False,
+                               header=None, quoting=csv.QUOTE_NONE)
+        if self.verbose:
+            print('Creating dictionary index...')
+        embeddings_index = {word: words_df.loc[word].values
+                            for word in words_df.index.values}
+        return embeddings_index
+
+    def __read_sample_embeddings__(self) -> EmbeddingIndex:
+        '''
+        Reads the sample embeddings and returns a dictionary of these
+
+        Returns:
+            embedding (EmbeddingIndex): A string-vector dictionary of the
+                                        sample embedding
+        '''
+        if self.verbose:
+            print('Reading the sample word vector file...')
+        words_df = pd.read_csv(SAMPLE_FILE, sep=" ", index_col=0,
                                na_values=None, keep_default_na=False,
                                header=None, quoting=csv.QUOTE_NONE)
         if self.verbose:
@@ -242,7 +265,7 @@ class UrlFeaturizer:
             1 * (domain_ending in TRUSTWORTHY_TLDS)
 
         feat_vec = np.array([
-            is_https, num_main_domain_words,
+            is_https, num_main_domain_words, num_sub_domains,
             is_www, is_www_weird, path_len,
             domain_end_verdict
         ])
