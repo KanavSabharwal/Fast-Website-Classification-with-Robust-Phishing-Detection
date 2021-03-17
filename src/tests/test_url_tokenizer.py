@@ -1,4 +1,3 @@
-import pytest
 from url_tokenizer import url_raw_splitter, url_domains_handler, \
                           url_path_handler, url_args_handler
 
