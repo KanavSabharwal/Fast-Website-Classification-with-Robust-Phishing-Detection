@@ -83,6 +83,7 @@ class UrlFeaturizer:
         return N
 
     def __read_embeddings__(self, embedding: str) -> EmbeddingIndex:
+
         '''
         Takes the choice of embedding and returns a dictionary with the word
         as key and the word embedding as the value

@@ -2,6 +2,8 @@ import re
 from typing import List, Tuple
 
 from util import flatten, word_splitter
+import html
+import urllib.parse
 
 # TODO: We should also handle HTML Encodings like %20 etc.
 # We may use something like html.unescape('&pound;682m') for this
@@ -29,6 +31,9 @@ def url_tokenizer(url: str) -> UrlData:
         args (List[ParamValPair]): A list of the corresponding parameters
                                    and values in the URL
     '''
+
+    # url = url_encoding(url)
+
     protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url)
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
@@ -142,3 +147,20 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
         param_val_tup = (word_splitter(param), word_splitter(val))
         pair_list.append(param_val_tup)
     return pair_list
+
+
+def url_encoding(rawurl: str) -> str:
+    '''
+    HTML encodings. Replacing all HTML encodings with their corresponding character
+    Args: the orinal url
+    returns: the encoded url
+
+    example:
+        >>>url_encoder("http://www.asstr.org/files/authors/jdish/www/janice%20and%20kirk%27s%20dark%20side.txt/hub?ring=spenderficwriter&amp")
+        "http://www.asstr.org/files/authors/jdish/www/janice and kirk's dark side.txt/hub?ring=spenderficwriter&"
+
+    '''
+    url = urllib.parse.unquote(rawurl)
+    url = html.unescape(url)
+    print("encoding_url",url)
+    return url
