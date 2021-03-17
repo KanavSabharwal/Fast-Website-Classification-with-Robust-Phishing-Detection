@@ -9,10 +9,13 @@ You should download these, and place them in the folder such that the directory 
 
 ```bash
 word_embed/
+	README.md  # this file
 	conceptnet/
 		numberbatch-19.08.txt
 	glove/
 		glove.42B.300d.txt
+	sample/
+		sample.txt  # used for testing
 ```
 
 
