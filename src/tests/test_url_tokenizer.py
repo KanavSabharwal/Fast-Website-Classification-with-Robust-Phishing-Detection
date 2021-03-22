@@ -1,5 +1,5 @@
 from url_tokenizer import url_raw_splitter, url_domains_handler, \
-                          url_path_handler, url_args_handler
+                          url_path_handler, url_args_handler, url_html_decoder
 
 
 class TestUrlRawSplitter:
@@ -106,3 +106,15 @@ class TestUrlArgsHandler:
         args = url_args_handler('amultiwordparam=multiwordvalue')
         assert args == [(['a', 'multi', 'word', 'param'],
                          ['multi', 'word', 'value'])]
+
+
+class TestUrlHtmlEncoder:
+    def test_simple_website(self):
+        encoded_url = 'http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp'
+        decoded_url = 'http://e.webring.com/hub?sid=&ring=hentff98&id=&'
+        assert url_html_decoder(encoded_url) == decoded_url
+
+    def test_multiple_encodings(self):
+        encoded_url = 'http://www.asstr.org/janice%20and%20kirk%27s'
+        decoded_url = "http://www.asstr.org/janice and kirk's"
+        assert url_html_decoder(encoded_url) == decoded_url
