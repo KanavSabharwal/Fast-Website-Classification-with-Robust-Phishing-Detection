@@ -5,10 +5,6 @@ from util import flatten, word_splitter
 import html
 import urllib.parse
 
-# TODO: We should also handle HTML Encodings like %20 etc.
-# We may use something like html.unescape('&pound;682m') for this
-# import html
-
 DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
 UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
@@ -32,9 +28,8 @@ def url_tokenizer(url: str) -> UrlData:
                                    and values in the URL
     '''
 
-    url = url_encoding(url)
-
-    protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url)
+    url_decoded = url_html_decoder(url)
+    protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url_decoded)
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
@@ -149,20 +144,23 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
     return pair_list
 
 
-def url_encoding(rawurl: str) -> str:
+def url_html_decoder(raw_url: str) -> str:
     '''
-    HTML encodings. Replacing all HTML encodings with their corresponding character
-    Args: the orinal url
-    returns: the encoded url
+    Replaces all HTML encodings with their corresponding character to give the
+    decoded URL string
 
-    example:
-        >>>url_encoder("http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp")
-        "http://e.webring.com/hub?sid=&ring=hentff98&id=&"
-        >>>url_encoder("http://www.asstr.org/files/authors/jdish/www/janice%20and%20kirk%27s%20dark%20side.txt")
-        "http://www.asstr.org/files/authors/jdish/www/janice and kirk's dark side.txt"
+    Args:
+        raw_url (str): The original full url
 
+    Returns:
+        decoded_url (str): The decoded url
+
+    Examples:
+        >>> url_html_decoder('http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp')
+        'http://e.webring.com/hub?sid=&ring=hentff98&id=&'
+        >>> url_html_decoder('http://www.asstr.org/janice%20and%20kirk%27s')
+        "http://www.asstr.org/janice and kirk's"
     '''
-    url = urllib.parse.unquote(rawurl)
-    url = html.unescape(url)
-    
-    return url
+    unquoted_url = urllib.parse.unquote(raw_url)
+    decoded_url = html.unescape(unquoted_url)
+    return decoded_url
