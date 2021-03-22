@@ -32,7 +32,7 @@ def url_tokenizer(url: str) -> UrlData:
                                    and values in the URL
     '''
 
-    # url = url_encoding(url)
+    url = url_encoding(url)
 
     protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url)
     domains = url_domains_handler(domains_raw)
@@ -156,11 +156,13 @@ def url_encoding(rawurl: str) -> str:
     returns: the encoded url
 
     example:
-        >>>url_encoder("http://www.asstr.org/files/authors/jdish/www/janice%20and%20kirk%27s%20dark%20side.txt/hub?ring=spenderficwriter&amp")
-        "http://www.asstr.org/files/authors/jdish/www/janice and kirk's dark side.txt/hub?ring=spenderficwriter&"
+        >>>url_encoder("http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp")
+        "http://e.webring.com/hub?sid=&ring=hentff98&id=&"
+        >>>url_encoder("http://www.asstr.org/files/authors/jdish/www/janice%20and%20kirk%27s%20dark%20side.txt")
+        "http://www.asstr.org/files/authors/jdish/www/janice and kirk's dark side.txt"
 
     '''
     url = urllib.parse.unquote(rawurl)
     url = html.unescape(url)
-    print("encoding_url",url)
+    
     return url
