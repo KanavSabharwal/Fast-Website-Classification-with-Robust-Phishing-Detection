@@ -1,7 +1,7 @@
 import re
 from typing import List, Tuple
 
-from util import flatten, word_splitter
+from util import flatten, flatten_twice, word_splitter
 import html
 import urllib.parse
 
@@ -27,14 +27,36 @@ def url_tokenizer(url: str) -> UrlData:
         args (List[ParamValPair]): A list of the corresponding parameters
                                    and values in the URL
     '''
-
     url_decoded = url_html_decoder(url)
     protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url_decoded)
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
-
     return (protocol, domains, path, args)
+
+
+def flatten_url_data(url_data: UrlData) -> List[str]:
+    '''
+    Helper function to transform the 4-tuple of UrlData returned by
+    url_tokenizer into a simple list of strings. Can be helpful to simplify
+    the problem if the position of words is not relevant.
+
+    Args:
+        url_data (UrlData): The UrlData 4-tuple returned by url_tokenizer
+
+    Returns:
+        words (List[str]): A flat list of all the words
+
+    Examples:
+        >>> url_data = url_tokenizer('http://some.test.com/path')
+        >>> flatten_url_data(url_data)
+        ['http', 'some', 'test', 'com', 'path']
+    '''
+    protocol, domains, path, args = url_data
+    sub_domain, main_domain, tld = domains
+    words = ([protocol] + sub_domain + main_domain + [tld]
+             + path + flatten_twice(args))
+    return words
 
 
 def url_raw_splitter(url: str) -> Tuple[str]:
