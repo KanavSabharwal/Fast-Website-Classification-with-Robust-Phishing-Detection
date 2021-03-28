@@ -33,6 +33,7 @@ def url_tokenizer(url: str) -> UrlData:
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
+
     return (protocol, domains, path, args)
 
 
@@ -126,7 +127,7 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
 
     Examples:
         >>> url_args_handler('sid=4')
-        [('sid', '4')]
+        [(['sid'], ['4'])]
         >>> url_args_handler('sid=4&amp;ring=hent&amp;list')
         [(['sid'], ['4']), (['ring'], ['hent']), (['list'], [])]
         >>> url_args_handler('')
@@ -136,7 +137,7 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
         return []
 
     pair_list = []
-    for pair in re.split(r'(?:&amp;)|;|&', url_args):
+    for pair in re.split(r'(?:&amp;)|;|&|\\', url_args):
         splitted = pair.split('=')[:2]
         param, val = (splitted[0], '') if len(splitted) == 1 else splitted
         param_val_tup = (word_splitter(param), word_splitter(val))

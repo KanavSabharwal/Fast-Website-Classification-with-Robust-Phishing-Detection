@@ -264,11 +264,28 @@ class UrlFeaturizer:
         path_len = len(path)
         domain_end_verdict = -1 * (domain_ending in UNTRUSTWORTHY_TLDS) + \
             1 * (domain_ending in TRUSTWORTHY_TLDS)
+        
+        domains_num_len = 0
+        if num_sub_domains is not 0:
+            if sub_domains[-1].isdigit():
+                domains_num_len = len(sub_domains[-1])
+
+        path_num_len = 0
+        for x in path:
+            if x.isdigit():
+                path_num_len += len(x)
+        
+        args_num_len = 0
+        for pair in args:
+            if pair[1][-1].isdigit():
+                args_num_len += len(pair[1][-1])
+        
+        total_num_len = domains_num_len + path_num_len + args_num_len
 
         feat_vec = np.array([
             is_https, num_main_domain_words, num_sub_domains,
-            is_www, is_www_weird, path_len,
-            domain_end_verdict
+            is_www, is_www_weird, path_len, domain_end_verdict,
+            domains_num_len, path_num_len, args_num_len, total_num_len
         ])
         return feat_vec
 
