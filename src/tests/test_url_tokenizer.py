@@ -1,5 +1,7 @@
 from url_tokenizer import url_raw_splitter, url_domains_handler, \
-                          url_path_handler, url_args_handler, url_html_decoder
+                          url_path_handler, url_args_handler, \
+                          url_html_decoder, flatten_url_data, \
+                          url_tokenizer
 
 
 class TestUrlRawSplitter:
@@ -29,6 +31,20 @@ class TestUrlRawSplitter:
         assert domains == 'some-site.com'
         assert path == '/some/path'
         assert args == 'arg=val'
+
+
+class TestFlattenUrlData:
+    def test_basic_url(self):
+        url_data = url_tokenizer('http://test.com/')
+        exp_lst = ['http', 'test', 'com']
+        assert flatten_url_data(url_data) == exp_lst
+
+    def test_comprehensive_url(self):
+        url = 'http://some.test.com/path.html?arg1=val1'
+        url_data = url_tokenizer(url)
+        exp_lst = ['http', 'some', 'test', 'com', 'path',
+                   'html', 'arg1', 'val1']
+        assert flatten_url_data(url_data) == exp_lst
 
 
 class TestUrlDomainsHandler:
