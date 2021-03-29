@@ -131,13 +131,12 @@ def url_path_handler(url_path: str) -> List[str]:
         >>> url_path_handler('/')
         []
     '''
-    regex = re.compile('@')
-    regex_lst = regex.findall(url_path)
     token_lst = flatten([word_splitter(token) for token in url_path.split('/')
                         if token])
-    if len(regex_lst) is not 0:
+    if url_path.find('@') >= 0:
         token_lst.append('@')
     return token_lst
+
 
 def url_args_handler(url_args: str) -> List[ParamValPair]:
     '''

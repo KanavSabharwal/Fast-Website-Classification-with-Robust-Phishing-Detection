@@ -257,13 +257,15 @@ class UrlFeaturizer:
         protocol, domains, path, args = url_data
         sub_domains, main_domain, domain_ending = domains
 
+        contains_aite = int(len(path) > 0 and path[-1] == '@')
+
         is_https = int(protocol == 'https')
         num_main_domain_words = len(main_domain)
         num_sub_domains = len(sub_domains)
         is_www = int(num_sub_domains > 0 and sub_domains[0] == 'www')
         is_www_weird = int(num_sub_domains > 0 and
                            bool(re.match(r'www.+', sub_domains[0])))
-        path_len = len(path)-1 if len(path)>0 and path[-1] is '@' else len(path)
+        path_len = len(path) - contains_aite
         domain_end_verdict = -1 * (domain_ending in UNTRUSTWORTHY_TLDS) + \
             1 * (domain_ending in TRUSTWORTHY_TLDS)
 
@@ -281,18 +283,14 @@ class UrlFeaturizer:
         total_num_digits = (sub_domains_num_digits
                             + path_num_digits
                             + args_num_digits)
-        
-        have_aite = int(len(path)>0 and path[-1] == '@')
 
-        word_court_in_url = len(words)-1 if have_aite == 1 else len(words)
+        word_court_in_url = len(words) - contains_aite
 
         feat_vec = np.array([
             is_https, num_main_domain_words, num_sub_domains,
             is_www, is_www_weird, path_len, domain_end_verdict,
             sub_domains_num_digits, path_num_digits, args_num_digits,
-            total_num_digits,
-            have_aite,
-            word_court_in_url
+            total_num_digits, have_aite, word_court_in_url
         ])
         return feat_vec
 
