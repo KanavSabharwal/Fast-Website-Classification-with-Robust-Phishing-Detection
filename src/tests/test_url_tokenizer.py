@@ -98,6 +98,10 @@ class TestUrlPathHandler:
     def test_path_multiword(self):
         assert url_path_handler('/some/mediumlengthpath/') == \
             ['some', 'medium', 'length', 'path']
+    
+    def test_aite(self):
+        assert url_path_handler('/mbraun@ameritech.net/') == \
+            ['m', 'braun', 'a', 'merit', 'ech', 'net', '@']
 
 
 class TestUrlArgsHandler:
