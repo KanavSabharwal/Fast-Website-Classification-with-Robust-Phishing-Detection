@@ -290,7 +290,7 @@ class UrlFeaturizer:
             is_https, num_main_domain_words, num_sub_domains,
             is_www, is_www_weird, path_len, domain_end_verdict,
             sub_domains_num_digits, path_num_digits, args_num_digits,
-            total_num_digits, have_aite, word_court_in_url
+            total_num_digits, contains_aite, word_court_in_url
         ])
         return feat_vec
 
