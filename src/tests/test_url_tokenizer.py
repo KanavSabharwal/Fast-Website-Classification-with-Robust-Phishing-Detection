@@ -5,6 +5,7 @@ from url_tokenizer import url_raw_splitter, url_domains_handler, \
 
 from read_data import read_token_expansion_dataset
 
+
 class TestUrlRawSplitter:
     def test_basic_url(self):
         vals = url_raw_splitter('http://www.some-basic_8site.com')
@@ -99,7 +100,7 @@ class TestUrlPathHandler:
     def test_path_multiword(self):
         assert url_path_handler('/some/mediumlengthpath/') == \
             ['some', 'medium', 'length', 'path']
-    
+
     def test_aite(self):
         assert url_path_handler('/mbraun@ameritech.net/') == \
             ['m', 'braun', 'a', 'merit', 'ech', 'net', '@']
@@ -142,29 +143,40 @@ class TestUrlHtmlEncoder:
 
 
 class TestTokenExpansion:
+    acronyms = read_token_expansion_dataset()
+
     def test_expanded_token(self):
-        Acrony_dict = dict()
-        Acrony_dict = read_token_expansion_dataset()
-
-        args = expand_token(Acrony_dict,'cs')
-        assert args == 'computer science'
-
-        args = expand_token(Acrony_dict,'nlp')
-        assert args == 'natural language processing'
-
-        args = expand_token(Acrony_dict,'nos')
-        assert args == 'network operating system'
-
+        assert expand_token('cs', self.acronyms) == 'computer science'
+        assert expand_token('nos', self.acronyms) == 'network operating system'
+        assert expand_token('nlp', self.acronyms) == \
+            'natural language processing'
 
     def test_url_tuple_expansion(self):
-        Acrony_dict = dict()
-        Acrony_dict = read_token_expansion_dataset()
+        url_data = (
+            'http',
+            (['www'], ['a', 'odon', 'line'], 'org'),
+            ['chsl', 'cs', 'sl', 'htm'],
+            []
+        )
+        url_data_expanded = (
+            'http',
+            (['world', 'wide', 'web'], ['a', 'odon', 'line'], 'org'),
+            ['chsl', 'computer', 'science', 'sierra', 'leone', 'htm'],
+            []
+        )
+        assert expand_url_tokens(url_data, self.acronyms) == url_data_expanded
 
-        args = expand_url_tokens(Acrony_dict,('http', (['www'], ['a', 'odon', 'line'], 'org'), ['chsl', 'cs', 'sl', 'htm'], []))
-        assert args == ('http', (['world', 'wide', 'web'], ['a', 'odon', 'line'], 'org'), ['chsl', 'computer', 'science', 'sierra', 'leone', 'htm'], [])
-
-        args = expand_url_tokens(Acrony_dict,('http', (['ed', 'web', '3', 'educ'], ['msu'], 'edu'), ['ysi'], [('sid','nlp')]))
-        assert args == ('http', (['ed', 'web', '3', 'educ'], ['michigan', 'state', 'university'], 'edu'), ['young', 'scots', 'for', 'independence'], [(['sid'], ['natural', 'language', 'processing'])])
-
-
-
+        url_data = (
+            'http',
+            (['ed', 'web', '3', 'educ'], ['msu'], 'edu'),
+            ['ysi'], ['nlp']
+        )
+        url_data_expanded = (
+            'http',
+            (['ed', 'web', '3', 'educ'],
+             ['michigan', 'state', 'university'],
+             'edu'),
+            ['young', 'scots', 'for', 'independence'],
+            ['natural', 'language', 'processing']
+        )
+        assert expand_url_tokens(url_data, self.acronyms) == url_data_expanded

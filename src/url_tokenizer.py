@@ -1,5 +1,5 @@
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from util import flatten, flatten_twice, word_splitter
 import html
@@ -12,10 +12,11 @@ DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
 UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
 
-Acrony_dict = dict()  # the dictionary contains abbreviated tokens and their corresponding phrases. 
-Acrony_dict = read_token_expansion_dataset()
+# Dictionary containing abbreviated tokens and their corresponding phrases
+ACRONYMS = read_token_expansion_dataset()
 
-def url_tokenizer(url: str) -> UrlData:
+
+def url_tokenizer(url: str, expand_tokens: bool = False) -> UrlData:
     '''
     Takes a url as a string and returns a 4-tuple of the processed protocol,
     domains, path and arguments.
@@ -37,16 +38,12 @@ def url_tokenizer(url: str) -> UrlData:
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
+    url_data = (protocol, domains, path, args)
 
-    
-    # expand tokens in the url tuple.Remove the comment symbol '#' if we need to expand the token.
-    #url_tuple = (protocol, domains, path, args)
-    #url_tuple_expanded = expand_url_tokens(Acrony_dict,url_tuple)
-    #protocol, domains, path, args = url_tuple_expanded
-    
+    if expand_tokens:
+        url_data = expand_url_tokens(url_data, ACRONYMS)
 
-
-    return (protocol, domains, path, args)
+    return url_data
 
 
 def flatten_url_data(url_data: UrlData) -> List[str]:
@@ -206,83 +203,64 @@ def url_html_decoder(raw_url: str) -> str:
     return decoded_url
 
 
-
-def expand_token(Acrony_dict,token) -> str:
+def expand_token(token: str, acronyms: Dict[str, str] = {}) -> str:
     '''
-    get token's corresponding phrase.
+    Get token's corresponding phrase. If no corresponding phrase exists, the
+    token itself is returned.
 
-    args:
-        Acrony_dict: the dictionary contains abbreviated tokens and their corresponding phrases. 
-                    It's generated from function "generate_Acrony_dict".
-        token: the token you'd like to expand.
-    returns:
-        the expanded token.        
+    Args:
+        token (str): Token to expand
+        acronyms (Dict[str, str]): Dictionary contains abbreviated tokens and
+                                   their corresponding phrases.
+
+    Returns:
+        token_expanded (str): The expanded token.
     '''
-
-    token = token.lower()
-    token_expansion = None
-    if token in Acrony_dict.keys():
-        token_expansion = Acrony_dict[token]
-    else:
-        token_expansion = token
-
-    return token_expansion
+    token_expanded = acronyms.get(token.lower(), token)
+    return token_expanded
 
 
-
-def expand_url_tokens(Acrony_dict,url_tuple):
+def expand_tokens(tokens: List[str], acronyms: Dict[str, str] = {}) \
+                  -> List[str]:
     '''
-    expand the tokens in the url tuple
-    args:
-        Acrony_dict: the dictionary contains abbreviated tokens and their corresponding phrases. 
-                    It's generated from function "generate_Acrony_dict".
-    url_tuple:(protocol, domains, path, args)
-        protocol (str): Protocol, http or https
-        domains (DomainData): A tuple consisting of a list of the sub-domains,
-                              list of the main domain tokenized and the domain
-                              ending
-        path (List[str]): A list of the tokens in the path
-        args (List[ParamValPair]): A list of the corresponding parameters
-                                   and values in the URL
-    returns:
-        url tuple with expanded tokens
+    Get tokens' corresponding phrases. If no corresponding phrase exists, the
+    token itself is returned.
+
+    Args:
+        tokens (List[str]): List of tokens to expand
+        acronyms (Dict[str, str]): Dictionary contains abbreviated tokens and
+                                   their corresponding phrases.
+
+    Returns:
+        tokens_expanded (List[str]): List of the expanded tokens
     '''
-    url_list = list(url_tuple)
-    protocol, domains, path, args = url_list
-
-    domain_list = list(domains)
-    sub_domain, main_domain, domain_ending = domain_list
-
-    sub_domain = [expand_token(Acrony_dict,token).split(' ') for token in sub_domain]
-    main_domain = [expand_token(Acrony_dict,token).split(' ') for token in main_domain]
-    path = [expand_token(Acrony_dict,token).split(' ') for token in path]
-    
-    for i in range(len(args)):
-        args[i] = tuple([expand_token(Acrony_dict,token).split(' ') for token in args[i]])
+    tokens_expanded = flatten([expand_token(token, acronyms).split()
+                               for token in tokens])
+    return tokens_expanded
 
 
-    #Removing nested lists
-    sub_domain = flat(sub_domain)
-    main_domain = flat(main_domain)
-    path = flat(path)
-    args = flat(args)
-
-    url_tuple_new = (protocol,(sub_domain,main_domain,domain_ending),path,args)
-    
-    return url_tuple_new
-
-
-def flat(a):
+def expand_url_tokens(url_data: UrlData, acronyms: Dict[str, str] = {}) \
+                      -> UrlData:
     '''
-    function for removing nested lists. This function is for handling situation like [['computer','scicence']] after expanding tokens.
-    args: a list like [[a],[b]]
-    return: the nested list [a,b]
+    Expand the tokens in the url_data
+
+    Args:
+        url_data (UrlData): The UrlData 4-tuple returned by url_tokenizer
+        acronyms (Dict[str, str]): Dictionary containing abbreviated tokens
+                                   and their corresponding phrases
+    Returns:
+        url_data_expanded (UrlData): The UrlData 4-tuple with expanded tokens
     '''
-    l = []
-    for i in a:
-        if type(i) is list:
-            for j in i:
-                l.append(j)
-        else:
-            l.append(i)
-    return l
+    protocol, domains, path, args = url_data
+    sub_domain, main_domain, domain_ending = domains
+
+    domains_exp = (
+        expand_tokens(sub_domain, acronyms),
+        expand_tokens(main_domain, acronyms),
+        domain_ending
+    )
+    path_exp = expand_tokens(path, acronyms)
+    args_exp = expand_tokens(args, acronyms)
+
+    url_data_exp = (protocol, domains_exp, path_exp, args_exp)
+    return url_data_exp
