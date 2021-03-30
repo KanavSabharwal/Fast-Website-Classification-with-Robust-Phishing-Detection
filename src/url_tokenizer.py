@@ -1,14 +1,12 @@
 import re
 from typing import List, Tuple
 
-from util import flatten, word_splitter
+from util import flatten, flatten_twice, word_splitter
 import html
 import urllib.parse
 
 from read_data import read_token_expansion_dataset
-# TODO: We should also handle HTML Encodings like %20 etc.
-# We may use something like html.unescape('&pound;682m') for this
-# import html
+
 
 DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
@@ -34,10 +32,8 @@ def url_tokenizer(url: str) -> UrlData:
         args (List[ParamValPair]): A list of the corresponding parameters
                                    and values in the URL
     '''
-
-    url = url_encoding(url)
-
-    protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url)
+    url_decoded = url_html_decoder(url)
+    protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url_decoded)
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
@@ -51,6 +47,30 @@ def url_tokenizer(url: str) -> UrlData:
 
 
     return (protocol, domains, path, args)
+
+
+def flatten_url_data(url_data: UrlData) -> List[str]:
+    '''
+    Helper function to transform the 4-tuple of UrlData returned by
+    url_tokenizer into a simple list of strings. Can be helpful to simplify
+    the problem if the position of words is not relevant.
+
+    Args:
+        url_data (UrlData): The UrlData 4-tuple returned by url_tokenizer
+
+    Returns:
+        words (List[str]): A flat list of all the words
+
+    Examples:
+        >>> url_data = url_tokenizer('http://some.test.com/path')
+        >>> flatten_url_data(url_data)
+        ['http', 'some', 'test', 'com', 'path']
+    '''
+    protocol, domains, path, args = url_data
+    sub_domain, main_domain, tld = domains
+    words = ([protocol] + sub_domain + main_domain + [tld]
+             + path + flatten_twice(args))
+    return words
 
 
 def url_raw_splitter(url: str) -> Tuple[str]:
@@ -125,8 +145,11 @@ def url_path_handler(url_path: str) -> List[str]:
         >>> url_path_handler('/')
         []
     '''
-    return flatten([word_splitter(token) for token in url_path.split('/')
-                    if token])
+    token_lst = flatten([word_splitter(token) for token in url_path.split('/')
+                        if token])
+    if url_path.find('@') >= 0:
+        token_lst.append('@')
+    return token_lst
 
 
 def url_args_handler(url_args: str) -> List[ParamValPair]:
@@ -143,7 +166,7 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
 
     Examples:
         >>> url_args_handler('sid=4')
-        [('sid', '4')]
+        [(['sid'], ['4'])]
         >>> url_args_handler('sid=4&amp;ring=hent&amp;list')
         [(['sid'], ['4']), (['ring'], ['hent']), (['list'], [])]
         >>> url_args_handler('')
@@ -153,7 +176,7 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
         return []
 
     pair_list = []
-    for pair in re.split(r'(?:&amp;)|;|&', url_args):
+    for pair in re.split(r'(?:&amp;)|;|&|\\', url_args):
         splitted = pair.split('=')[:2]
         param, val = (splitted[0], '') if len(splitted) == 1 else splitted
         param_val_tup = (word_splitter(param), word_splitter(val))
@@ -161,26 +184,30 @@ def url_args_handler(url_args: str) -> List[ParamValPair]:
     return pair_list
 
 
-def url_encoding(rawurl: str) -> str:
+def url_html_decoder(raw_url: str) -> str:
     '''
-    HTML encodings. Replacing all HTML encodings with their corresponding character
-    Args: the orinal url
-    returns: the encoded url
+    Replaces all HTML encodings with their corresponding character to give the
+    decoded URL string
 
-    example:
-        >>>url_encoder("http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp")
-        "http://e.webring.com/hub?sid=&ring=hentff98&id=&"
-        >>>url_encoder("http://www.asstr.org/files/authors/jdish/www/janice%20and%20kirk%27s%20dark%20side.txt")
-        "http://www.asstr.org/files/authors/jdish/www/janice and kirk's dark side.txt"
+    Args:
+        raw_url (str): The original full url
 
+    Returns:
+        decoded_url (str): The decoded url
+
+    Examples:
+        >>> url_html_decoder('http://e.webring.com/hub?sid=&amp;ring=hentff98&amp;id=&amp')
+        'http://e.webring.com/hub?sid=&ring=hentff98&id=&'
+        >>> url_html_decoder('http://www.asstr.org/janice%20and%20kirk%27s')
+        "http://www.asstr.org/janice and kirk's"
     '''
-    url = urllib.parse.unquote(rawurl)
-    url = html.unescape(url)
-    
-    return url
+    unquoted_url = urllib.parse.unquote(raw_url)
+    decoded_url = html.unescape(unquoted_url)
+    return decoded_url
 
 
-def expand_token(Acrony_dict,token):
+
+def expand_token(Acrony_dict,token) -> str:
     '''
     get token's corresponding phrase.
 
