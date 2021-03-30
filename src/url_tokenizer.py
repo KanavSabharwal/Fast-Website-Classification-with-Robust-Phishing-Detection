@@ -256,7 +256,10 @@ def expand_url_tokens(Acrony_dict,url_tuple):
     sub_domain = [expand_token(Acrony_dict,token).split(' ') for token in sub_domain]
     main_domain = [expand_token(Acrony_dict,token).split(' ') for token in main_domain]
     path = [expand_token(Acrony_dict,token).split(' ') for token in path]
-    args = [expand_token(Acrony_dict,token).split(' ') for token in args]
+    
+    for i in range(len(args)):
+        args[i] = tuple([expand_token(Acrony_dict,token).split(' ') for token in args[i]])
+
 
     #Removing nested lists
     sub_domain = flat(sub_domain)

@@ -163,8 +163,8 @@ class TestTokenExpansion:
         args = expand_url_tokens(Acrony_dict,('http', (['www'], ['a', 'odon', 'line'], 'org'), ['chsl', 'cs', 'sl', 'htm'], []))
         assert args == ('http', (['world', 'wide', 'web'], ['a', 'odon', 'line'], 'org'), ['chsl', 'computer', 'science', 'sierra', 'leone', 'htm'], [])
 
-        args = expand_url_tokens(Acrony_dict,('http', (['ed', 'web', '3', 'educ'], ['msu'], 'edu'), ['ysi'], ['nlp']))
-        assert args == ('http', (['ed', 'web', '3', 'educ'], ['michigan', 'state', 'university'], 'edu'), ['young', 'scots', 'for', 'independence'], ['natural', 'language', 'processing'])
+        args = expand_url_tokens(Acrony_dict,('http', (['ed', 'web', '3', 'educ'], ['msu'], 'edu'), ['ysi'], [('sid','nlp')]))
+        assert args == ('http', (['ed', 'web', '3', 'educ'], ['michigan', 'state', 'university'], 'edu'), ['young', 'scots', 'for', 'independence'], [(['sid'], ['natural', 'language', 'processing'])])
 
 
 
