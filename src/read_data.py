@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 from os import listdir
 from os.path import isdir, join, dirname, abspath
 import pandas as pd
@@ -9,14 +9,15 @@ DATA_DIR = join(CUR_DIR, 'data')
 DMOZ_DIR = join(DATA_DIR, 'dmoz')
 WEBKB_DIR = join(DATA_DIR, 'webkb')
 PHISHING_DIR = join(DATA_DIR, 'phishing')
-
-TOKEN_EXPANSION_DIR = join(DATA_DIR,'token_expansion')
+TOKEN_EXPANSION_DIR = join(DATA_DIR, 'token_expansion')
 
 DMOZ_BASE_FILENAME = 'URL Classification'
 PHISHING_BASE_FILENAME = 'phishing_dataset'
 BENIGN_BASE_FILENAME = 'benign_dataset'
+TOKEN_EXPANSION_FILENAME = 'AcronymsFile.csv'
 
-def is_valid(url_to_test) -> bool:
+
+def is_valid(url_to_test: str) -> bool:
     '''Checks whether a given url seems to be a valid url'''
     return type(url_to_test) is str and url_to_test.startswith('http')
 
@@ -91,6 +92,7 @@ def read_all_datasets(use_sample=False) -> Tuple[pd.DataFrame]:
         read_ilp(use_sample=use_sample)
     )
 
+
 def read_concat_datasets(use_sample=False) -> pd.DataFrame:
     '''
     Reads all the datasets and returns a single DataFrame consiting of all of
@@ -106,26 +108,18 @@ def read_concat_datasets(use_sample=False) -> pd.DataFrame:
     return concatted
 
 
-def read_token_expansion_dataset():
+def read_token_expansion_dataset() -> Dict[str, str]:
     '''
-    generate the dictionary for token expansion.
-    key: the abbreviated token.
-    value: the phrase of the token corresponding to the key.
+    Generates a Dict[str, str] for token expansion where the key is the
+    abbreviated token and the value is the phrase of the token.
 
-    returns: 
-        dictionary of abbreviated tokens and their corresponding phrases.
+    Returns:
+        acronyms (Dict[str, str]): Dictionary of abbreviated tokens and their
+                                   corresponding phrases.
     '''
-    p_filename = 'AcronymsFile.csv'
-    p_filedir = join(TOKEN_EXPANSION_DIR, p_filename)
-
-    Acrony_dict = dict()
-    with open(p_filedir,'r',encoding='utf-8') as fhand:
-        data = fhand.read().split('\n')
-
-        for line in data:
-            if line is not None:
-                item = line.split(',')
-                if item[0] not in Acrony_dict.keys():
-                    Acrony_dict[item[0]] = item[1]
-
-    return Acrony_dict
+    filepath = join(TOKEN_EXPANSION_DIR, TOKEN_EXPANSION_FILENAME)
+    acronym_df = pd.read_csv(filepath, header=None, index_col=0,
+                             dtype=str, na_filter=False)
+    acronyms = {acronym: acronym_df.loc[acronym].values[0]
+                for acronym in acronym_df.index.values}
+    return acronyms
