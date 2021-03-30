@@ -169,7 +169,8 @@ class TestTokenExpansion:
         url_data = (
             'http',
             (['ed', 'web', '3', 'educ'], ['msu'], 'edu'),
-            ['ysi'], ['nlp']
+            ['ysi'],
+            [(['nlp', 'word'], ['ed']), (['ed'], ['ed'])]
         )
         url_data_expanded = (
             'http',
@@ -177,6 +178,7 @@ class TestTokenExpansion:
              ['michigan', 'state', 'university'],
              'edu'),
             ['young', 'scots', 'for', 'independence'],
-            ['natural', 'language', 'processing']
+            [(['natural', 'language', 'processing', 'word'], ['ed']),
+             (['ed'], ['ed'])]
         )
         assert expand_url_tokens(url_data, self.acronyms) == url_data_expanded

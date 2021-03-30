@@ -1,10 +1,10 @@
-import re
 from typing import List, Tuple, Dict
-
-from util import flatten, flatten_twice, word_splitter
+import re
 import html
+
 import urllib.parse
 
+from util import flatten, flatten_twice, word_splitter
 from read_data import read_token_expansion_dataset
 
 
@@ -23,6 +23,7 @@ def url_tokenizer(url: str, expand_tokens: bool = False) -> UrlData:
 
     Args:
         url (str): Full url of webpage
+        expand_tokens (bool): Whether or not word expansion should be used
 
     Returns:
         protocol (str): Protocol, http or https
@@ -260,7 +261,10 @@ def expand_url_tokens(url_data: UrlData, acronyms: Dict[str, str] = {}) \
         domain_ending
     )
     path_exp = expand_tokens(path, acronyms)
-    args_exp = expand_tokens(args, acronyms)
+    args_exp = [
+       (expand_tokens(arg_lst, acronyms), expand_tokens(val_lst, acronyms))
+       for arg_lst, val_lst in args
+    ]
 
     url_data_exp = (protocol, domains_exp, path_exp, args_exp)
     return url_data_exp
