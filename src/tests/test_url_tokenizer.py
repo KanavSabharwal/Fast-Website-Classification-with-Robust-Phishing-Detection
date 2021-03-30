@@ -1,6 +1,7 @@
 from url_tokenizer import url_raw_splitter, url_domains_handler, \
-                          url_path_handler, url_args_handler
+                          url_path_handler, url_args_handler, expand_token,expand_url_tokens
 
+from read_data import read_token_expansion_dataset
 
 class TestUrlRawSplitter:
     def test_basic_url(self):
@@ -106,3 +107,29 @@ class TestUrlArgsHandler:
         args = url_args_handler('amultiwordparam=multiwordvalue')
         assert args == [(['a', 'multi', 'word', 'param'],
                          ['multi', 'word', 'value'])]
+
+
+class TestTokenExpansion:
+    def test_expanded_token(self):
+        Acrony_dict = dict()
+        Acrony_dict = read_token_expansion_dataset()
+
+        args = expand_token(Acrony_dict,'cs')
+        assert args == 'computer science'
+
+        args = expand_token(Acrony_dict,'nlp')
+        assert args == 'natural language processing'
+
+        args = expand_token(Acrony_dict,'nos')
+        assert args == 'network operating system'
+
+
+    def test_url_tuple_expansion(self):
+        Acrony_dict = dict()
+        Acrony_dict = read_token_expansion_dataset()
+
+        args = expand_url_tokens(Acrony_dict,('http', (['www'], ['a', 'odon', 'line'], 'org'), ['chsl', 'cs', 'sl', 'htm'], []))
+        assert args == ('http', (['world', 'wide', 'web'], ['a', 'odon', 'line'], 'org'), ['chsl', 'computer', 'science', 'sierra', 'leone', 'htm'], [])
+
+        args = expand_url_tokens(Acrony_dict,('http', (['ed', 'web', '3', 'educ'], ['msu'], 'edu'), ['ysi'], ['nlp']))
+        assert args == ('http', (['ed', 'web', '3', 'educ'], ['michigan', 'state', 'university'], 'edu'), ['young', 'scots', 'for', 'independence'], ['natural', 'language', 'processing'])

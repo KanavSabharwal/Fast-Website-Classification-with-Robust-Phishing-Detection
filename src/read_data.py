@@ -10,6 +10,8 @@ DMOZ_DIR = join(DATA_DIR, 'dmoz')
 WEBKB_DIR = join(DATA_DIR, 'webkb')
 PHISHING_DIR = join(DATA_DIR, 'phishing')
 
+TOKEN_EXPANSION_DIR = join(DATA_DIR,'token_expansion')
+
 DMOZ_BASE_FILENAME = 'URL Classification'
 PHISHING_BASE_FILENAME = 'phishing_dataset'
 BENIGN_BASE_FILENAME = 'benign_dataset'
@@ -102,3 +104,28 @@ def read_concat_datasets(use_sample=False) -> pd.DataFrame:
     ilp['dataset'] = 'ilp'
     concatted = pd.concat([dmoz, phishing, ilp])
     return concatted
+
+
+def read_token_expansion_dataset():
+    '''
+    generate the dictionary for token expansion.
+    key: the abbreviated token.
+    value: the phrase of the token corresponding to the key.
+
+    returns: 
+        dictionary of abbreviated tokens and their corresponding phrases.
+    '''
+    p_filename = 'AcronymsFile.csv'
+    p_filedir = join(TOKEN_EXPANSION_DIR, p_filename)
+
+    Acrony_dict = dict()
+    with open(p_filedir,'r',encoding='utf-8') as fhand:
+        data = fhand.read().split('\n')
+
+        for line in data:
+            if line is not None:
+                item = line.split(',')
+                if item[0] not in Acrony_dict.keys():
+                    Acrony_dict[item[0]] = item[1]
+
+    return Acrony_dict

@@ -5,6 +5,7 @@ from util import flatten, word_splitter
 import html
 import urllib.parse
 
+from read_data import read_token_expansion_dataset
 # TODO: We should also handle HTML Encodings like %20 etc.
 # We may use something like html.unescape('&pound;682m') for this
 # import html
@@ -13,6 +14,8 @@ DomainData = Tuple[List[str], List[str], str]
 ParamValPair = Tuple[str, str]
 UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
 
+Acrony_dict = dict()  # the dictionary contains abbreviated tokens and their corresponding phrases. 
+Acrony_dict = read_token_expansion_dataset()
 
 def url_tokenizer(url: str) -> UrlData:
     '''
@@ -38,6 +41,15 @@ def url_tokenizer(url: str) -> UrlData:
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
+
+    
+    # expand tokens in the url tuple.Remove the comment symbol '#' if we need to expand the token.
+    #url_tuple = (protocol, domains, path, args)
+    #url_tuple_expanded = expand_url_tokens(Acrony_dict,url_tuple)
+    #protocol, domains, path, args = url_tuple_expanded
+    
+
+
     return (protocol, domains, path, args)
 
 
@@ -166,3 +178,81 @@ def url_encoding(rawurl: str) -> str:
     url = html.unescape(url)
     
     return url
+
+
+def expand_token(Acrony_dict,token):
+    '''
+    get token's corresponding phrase.
+
+    args:
+        Acrony_dict: the dictionary contains abbreviated tokens and their corresponding phrases. 
+                    It's generated from function "generate_Acrony_dict".
+        token: the token you'd like to expand.
+    returns:
+        the expanded token.        
+    '''
+
+    token = token.lower()
+    token_expansion = None
+    if token in Acrony_dict.keys():
+        token_expansion = Acrony_dict[token]
+    else:
+        token_expansion = token
+
+    return token_expansion
+
+
+
+def expand_url_tokens(Acrony_dict,url_tuple):
+    '''
+    expand the tokens in the url tuple
+    args:
+        Acrony_dict: the dictionary contains abbreviated tokens and their corresponding phrases. 
+                    It's generated from function "generate_Acrony_dict".
+    url_tuple:(protocol, domains, path, args)
+        protocol (str): Protocol, http or https
+        domains (DomainData): A tuple consisting of a list of the sub-domains,
+                              list of the main domain tokenized and the domain
+                              ending
+        path (List[str]): A list of the tokens in the path
+        args (List[ParamValPair]): A list of the corresponding parameters
+                                   and values in the URL
+    returns:
+        url tuple with expanded tokens
+    '''
+    url_list = list(url_tuple)
+    protocol, domains, path, args = url_list
+
+    domain_list = list(domains)
+    sub_domain, main_domain, domain_ending = domain_list
+
+    sub_domain = [expand_token(Acrony_dict,token).split(' ') for token in sub_domain]
+    main_domain = [expand_token(Acrony_dict,token).split(' ') for token in main_domain]
+    path = [expand_token(Acrony_dict,token).split(' ') for token in path]
+    args = [expand_token(Acrony_dict,token).split(' ') for token in args]
+
+    #Removing nested lists
+    sub_domain = flat(sub_domain)
+    main_domain = flat(main_domain)
+    path = flat(path)
+    args = flat(args)
+
+    url_tuple_new = (protocol,(sub_domain,main_domain,domain_ending),path,args)
+    
+    return url_tuple_new
+
+
+def flat(a):
+    '''
+    function for removing nested lists. This function is for handling situation like [['computer','scicence']] after expanding tokens.
+    args: a list like [[a],[b]]
+    return: the nested list [a,b]
+    '''
+    l = []
+    for i in a:
+        if type(i) is list:
+            for j in i:
+                l.append(j)
+        else:
+            l.append(i)
+    return l
