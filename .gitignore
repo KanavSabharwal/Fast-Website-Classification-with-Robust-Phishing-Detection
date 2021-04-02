@@ -5,10 +5,13 @@ webkb/
 phishing-other/
 phishing_dataset.csv
 benign_dataset.csv
+phishing_extra.csv
 
 # Word embeddings
 numberbatch-19.08.txt
 glove.42B.300d.txt
+
+.wakatime-project
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

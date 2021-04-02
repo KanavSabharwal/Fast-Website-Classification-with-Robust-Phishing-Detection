@@ -14,6 +14,7 @@ TOKEN_EXPANSION_DIR = join(DATA_DIR, 'token_expansion')
 DMOZ_BASE_FILENAME = 'URL Classification'
 PHISHING_BASE_FILENAME = 'phishing_dataset'
 BENIGN_BASE_FILENAME = 'benign_dataset'
+PHISHING_EXTRA_FILENAME = 'phishing_extra'
 TOKEN_EXPANSION_FILENAME = 'AcronymsFile.csv'
 
 
@@ -57,6 +58,17 @@ def read_phishing(use_sample=False) -> pd.DataFrame:
     df = pd.concat([phishing_df, benign_df])
     df.insert(0, 'idx', np.arange(len(df)))
 
+    return filter_invalid_rows(df)
+
+
+def read_phishing_extra(use_sample=False) -> pd.DataFrame:
+    '''Reads the extra phishing dataset and returns it as a DataFrame'''
+    sample = '_sample' if use_sample else ''
+    filename = f'{PHISHING_EXTRA_FILENAME}{sample}.csv'
+    filedir = join(PHISHING_DIR, filename)
+    df = pd.read_csv(filedir)[['url']]
+    df['label'] = 'phishing'
+    df.insert(0, 'idx', np.arange(len(df)))
     return filter_invalid_rows(df)
 
 
