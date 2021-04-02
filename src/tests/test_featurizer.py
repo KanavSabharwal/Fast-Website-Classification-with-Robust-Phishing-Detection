@@ -21,8 +21,8 @@ class TestUrlRawSplitter:
         feat = create_feat(2, 3, 4, 5)
         assert feat.N == (2 + 3 + 4 + 5 + 1)
 
-    def test_unknown_vec(self):
-        fst, snd = create_feat(1, 1, 1, 1).unknown_vec
+    def test_avg_vec(self):
+        fst, snd = create_feat(1, 1, 1, 1).avg_vec
         assert fst == -np.mean(np.arange(1, 9))
         assert snd == np.mean(np.arange(1, 9))
 
@@ -49,7 +49,7 @@ class TestUrlRawSplitter:
         # is_www, is_www_weird, path_len, domain_end_verdict,
         # sub_domains_num_digits, path_num_digits, args_num_digits,
         # total_num_digits
-        # have_aite
+        # contains_at_symbol
         # word_court_in_url
         vec, _ = feat.featurize('http://test.com')
         assert np.allclose(vec, np.array([0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 3]))
@@ -70,7 +70,7 @@ class TestUrlRawSplitter:
         assert np.allclose(vec, np.array([0, 1, 1, 1, 0, 1, 1, 0, 0, 6, 6, 0, 11]))
 
         vec, _ = feat.featurize('http://www.geocities.com/@ech.net/betpage.html')
-        assert np.allclose(vec, np.array([0, 2, 1, 1, 0, 5, 1, 0, 0, 0, 0, 1, 10])) 
+        assert np.allclose(vec, np.array([0, 2, 1, 1, 0, 5, 1, 0, 0, 0, 0, 1, 10]))
 
     def test_word_embed_matrix_size(self):
         feat = create_feat(1, 1, 1, 1)
@@ -92,7 +92,7 @@ class TestUrlRawSplitter:
         _, mat = feat.featurize('http://unk.test.com?arg=val')
 
         assert np.allclose(mat, np.array([
-            feat.unknown_vec,  # unknown token, should be average vector
+            feat.avg_vec,  # unknown token, should be average vector
             feat.embeddings_index['test'],
             [-0.0, 0.0],  # non-present 2nd index main domain, should be zeros
             feat.embeddings_index['com'],

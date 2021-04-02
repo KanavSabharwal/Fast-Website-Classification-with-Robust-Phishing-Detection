@@ -10,6 +10,7 @@ from url_tokenizer import url_tokenizer, UrlData, flatten_url_data
 
 import numpy as np
 import pandas as pd
+import gensim.downloader as api
 
 EmbeddingIndex = Dict[str, List[float]]
 VectorMatrix = Tuple[np.ndarray, np.ndarray]
@@ -22,18 +23,26 @@ ARG_DEFAULT_MAX_LEN = 10
 TRUSTWORTHY_TLDS = set(['com', 'net', 'edu', 'org', 'gov'])
 UNTRUSTWORTHY_TLDS = set(['xyz', 'biz', 'info'])
 
-# These values should not be changed
-GLOVE, CONCEPTNET, SAMPLE = 'glove', 'conceptnet', 'sample'
+# These following constants should not be changed
+GLOVE, CONCEPTNET, WORD2VEC, FASTTEXT, SAMPLE = \
+    'GloVe', 'Conceptnet', 'Word2Vec', 'FastText', 'sample'
+
+WORD_EMBED_TO_GENSIM_FILE = {
+    GLOVE: 'glove-wiki-gigaword-300',
+    CONCEPTNET: 'conceptnet-numberbatch-17-06-300',
+    WORD2VEC: 'word2vec-google-news-300',
+    FASTTEXT: 'fasttext-wiki-news-subwords-300',
+}
+
 CUR_DIR = dirname(abspath(__file__))
 WORD_EMBED_PATH = os.path.join(CUR_DIR, 'word_embed')
-GLOVE_FILE = os.path.join(WORD_EMBED_PATH, GLOVE, 'glove.42B.300d.txt')
-CONCEPTNET_FILE = os.path.join(WORD_EMBED_PATH, CONCEPTNET, 'numberbatch-19.08.txt')
 SAMPLE_FILE = os.path.join(WORD_EMBED_PATH, SAMPLE, 'sample.txt')
 
 
 class UrlFeaturizer:
     def __init__(self,
                  embedding: str = CONCEPTNET,
+                 expand_tokens: bool = False,
                  sub_domain_max_len: int = SUB_DOMAIN_DEFAULT_MAX_LEN,
                  main_domain_max_len: int = MAIN_DOMAIN_DEFAULT_MAX_LEN,
                  path_max_len: int = PATH_DEFAULT_MAX_LEN,
@@ -43,7 +52,8 @@ class UrlFeaturizer:
         Returns a new UrlFeaturizer with the loaded word embedding and settings
 
         Args:
-            embedding (str): A list of tokenized words
+            embedding (str): The embedding to use, i.e. 'GloVe' or 'Conceptnet'
+            expand_tokens (bool): Whether or not to perform word expansion
             sub_domain_max_len (int): The length of the sub_domain matrix in
                                       the generated word matrix
             main_domain_max_len (int): The length of the main_domain matrix in
@@ -59,14 +69,16 @@ class UrlFeaturizer:
         '''
         t_start = time()
         self.verbose = verbose
+        self.expand_tokens = expand_tokens
+        self.embed_prefix = ''
         self.sub_domain_max_len = sub_domain_max_len
         self.main_domain_max_len = main_domain_max_len
         self.path_max_len = path_max_len
         self.arg_max_len = arg_max_len
         self.N = self.__calc_n__()
         self.embeddings_index = self.__read_embeddings__(embedding)
-        self.embedding_dim = len(self.embeddings_index['the'])
-        self.unknown_vec = self.__create_unknown_vec__()
+        self.embedding_dim = len(self.__get_embed__('the'))
+        self.avg_vec = self.__create_avg_vec__(embedding)
         self.hand_picked_feat_len = self.__hand_picked_feat_len__()
         if self.verbose:
             elapsed = time() - t_start
@@ -90,65 +102,41 @@ class UrlFeaturizer:
         as key and the word embedding as the value
 
         Args:
-            embedding (str): String, should be one of "glove", "conceptnet",
-                             "sample".
+            embedding (str): String, should be one of the keys in
+                             WORD_EMBED_TO_GENSIM_FILE or "sample".
+
+        Returns:
+            embedding (EmbeddingIndex): A string-vector dictionary of the
+                                        embedding
+        '''
+        if embedding in WORD_EMBED_TO_GENSIM_FILE:
+            return self.__read_gensim_embeddings__(embedding)
+        elif embedding == SAMPLE:
+            return self.__read_sample_embeddings__()
+        else:
+            raise ValueError(f'{embedding} is not a valid embedding choice.')
+
+    def __read_gensim_embeddings__(self, embedding: str) -> EmbeddingIndex:
+        '''
+        Takes the choice of embedding and returns a dictionary with the word
+        as key and the word embedding as the value
+
+        Args:
+            embedding (str): String, should be one of the keys in
+                             WORD_EMBED_TO_GENSIM_FILE.
 
         Returns:
             embedding (EmbeddingIndex): A string-vector dictionary of the
                                         embedding
         '''
         if embedding == CONCEPTNET:
-            return self.__read_conceptnet_embeddings__()
-        elif embedding == GLOVE:
-            return self.__read_glove_embeddings__()
-        elif embedding == SAMPLE:
-            return self.__read_sample_embeddings__()
-        else:
-            msg = f'{embedding} is not a valid embedding choice. ' + \
-                  f'Try one of {[CONCEPTNET, GLOVE, SAMPLE]}'
-            raise ValueError(msg)
+            self.embed_prefix = '/c/en/'
 
-    def __read_conceptnet_embeddings__(self) -> EmbeddingIndex:
-        '''
-        Reads the ConceptNet embeddings and returns a dictionary of these
-
-        Returns:
-            embedding (EmbeddingIndex): A string-vector dictionary of the
-                                        ConceptNet embedding
-        '''
+        embedding_file = WORD_EMBED_TO_GENSIM_FILE[embedding]
         if self.verbose:
-            print('Reading the ConceptNet word vector file...')
-        words_df = pd.read_csv(CONCEPTNET_FILE, sep=" ", index_col=0,
-                               skiprows=1, header=None,
-                               keep_default_na=False, na_values=None,
-                               quoting=csv.QUOTE_NONE)
-        if self.verbose:
-            print('Remapping word values...')
-        words_df.index = words_df.index.map(lambda x: x.split('/')[-1])
-        if self.verbose:
-            print('Creating dictionary index...')
-        embeddings_index = {word: words_df.loc[word].values
-                            for word in words_df.index.values}
-        return embeddings_index
-
-    def __read_glove_embeddings__(self) -> EmbeddingIndex:
-        '''
-        Reads the GloVe embeddings and returns a dictionary of these
-
-        Returns:
-            embedding (EmbeddingIndex): A string-vector dictionary of the
-                                        GloVe embedding
-        '''
-        if self.verbose:
-            print('Reading the GloVe word vector file...')
-        words_df = pd.read_csv(GLOVE_FILE, sep=" ", index_col=0,
-                               na_values=None, keep_default_na=False,
-                               header=None, quoting=csv.QUOTE_NONE)
-        if self.verbose:
-            print('Creating dictionary index...')
-        embeddings_index = {word: words_df.loc[word].values
-                            for word in words_df.index.values}
-        return embeddings_index
+            print(f'Reading the {embedding_file} word vector file...')
+        embeddings = api.load(embedding_file)
+        return embeddings
 
     def __read_sample_embeddings__(self) -> EmbeddingIndex:
         '''
@@ -160,6 +148,7 @@ class UrlFeaturizer:
         '''
         if self.verbose:
             print('Reading the sample word vector file...')
+
         words_df = pd.read_csv(SAMPLE_FILE, sep=" ", index_col=0,
                                na_values=None, keep_default_na=False,
                                header=None, quoting=csv.QUOTE_NONE)
@@ -169,18 +158,21 @@ class UrlFeaturizer:
                             for word in words_df.index.values}
         return embeddings_index
 
-    def __create_unknown_vec__(self) -> np.ndarray:
+    def __create_avg_vec__(self, embedding: str) -> np.ndarray:
         '''
         Creates a vector that is the average of all word vectors
 
         Returns:
-            unknown_vec (np.ndarray): Average word vector
+            avg_vec (np.ndarray): Average word vector
         '''
         if self.verbose:
-            print('Creating the average vector of all the word vectors')
-        word_embed_vector_lst = list(self.embeddings_index.values())
-        unknown_vec = np.mean(word_embed_vector_lst, axis=0)
-        return unknown_vec
+            print('Creating the average vector of all the word vectors...')
+
+        word_matrix = (np.array(list(self.embeddings_index.values()))
+                       if embedding == SAMPLE
+                       else np.array(self.embeddings_index.wv.syn0))
+        avg_vec = np.mean(word_matrix, axis=0)
+        return avg_vec
 
     def __hand_picked_feat_len__(self):
         '''
@@ -193,13 +185,31 @@ class UrlFeaturizer:
         feat_len = len(self.__create_hand_picked_features__(sample_url_data))
         return feat_len
 
-    def __word_embed__(self, word_lst: List[str], mat_len: int) -> np.ndarray:
+    def __get_embed__(self, token: str) -> np.ndarray:
         '''
-        Takes a list of words and the length of the matrix and creates a word
+        Takes a single token and returns the corresponding embedding. If token
+        is not in vocabulary, the average word vector is returned
+
+        Args:
+            token (str): Token to get embedding for
+
+        Returns:
+            word_embed (np.ndarray): Word embedding array for token if present,
+                                     otherwise average word embedding array
+        '''
+        p_word = self.embed_prefix + token
+        word_embed = (self.embeddings_index[p_word]
+                      if p_word in self.embeddings_index
+                      else self.avg_vec)
+        return word_embed
+
+    def __word_embed__(self, tokens: List[str], mat_len: int) -> np.ndarray:
+        '''
+        Takes a list of tokens and the length of the matrix and creates a word
         embedding from this of shape (mat_len, self.embedding_dim)
 
         Args:
-            word_lst (str): A list of tokenized words
+            tokens (str): A list of tokenized words
             mat_len (int): The desired length of the matrix
 
         Returns:
@@ -207,10 +217,8 @@ class UrlFeaturizer:
                                        shape (mat_len, embedding_dim)
         '''
         embed_matrix = np.zeros((mat_len, self.embedding_dim))
-        for i, word in enumerate(word_lst[:mat_len]):
-            in_vocab = word in self.embeddings_index
-            vec = self.embeddings_index[word] if in_vocab else self.unknown_vec
-            embed_matrix[i] = vec
+        for i, token in enumerate(tokens[:mat_len]):
+            embed_matrix[i] = self.__get_embed__(token)
         return embed_matrix
 
     def __create_word_matrix__(self, url_data: UrlData) -> np.ndarray:
@@ -257,17 +265,16 @@ class UrlFeaturizer:
         protocol, domains, path, args = url_data
         sub_domains, main_domain, domain_ending = domains
 
-        contains_aite = int(len(path) > 0 and path[-1] == '@')
-
+        contains_at_symbol = int(len(path) > 0 and path[-1] == '@')
         is_https = int(protocol == 'https')
         num_main_domain_words = len(main_domain)
         num_sub_domains = len(sub_domains)
         is_www = int(num_sub_domains > 0 and sub_domains[0] == 'www')
         is_www_weird = int(num_sub_domains > 0 and
                            bool(re.match(r'www.+', sub_domains[0])))
-        path_len = len(path) - contains_aite
-        domain_end_verdict = -1 * (domain_ending in UNTRUSTWORTHY_TLDS) + \
-            1 * (domain_ending in TRUSTWORTHY_TLDS)
+        path_len = len(path) - contains_at_symbol
+        domain_end_verdict = (- 1 * (domain_ending in UNTRUSTWORTHY_TLDS)
+                              + 1 * (domain_ending in TRUSTWORTHY_TLDS))
 
         sub_domain_chars = flatten(sub_domains)
         sub_domains_num_digits = len([char for char in sub_domain_chars
@@ -284,13 +291,13 @@ class UrlFeaturizer:
                             + path_num_digits
                             + args_num_digits)
 
-        word_court_in_url = len(words) - contains_aite
+        word_court_in_url = len(words) - contains_at_symbol
 
         feat_vec = np.array([
             is_https, num_main_domain_words, num_sub_domains,
             is_www, is_www_weird, path_len, domain_end_verdict,
             sub_domains_num_digits, path_num_digits, args_num_digits,
-            total_num_digits, contains_aite, word_court_in_url
+            total_num_digits, contains_at_symbol, word_court_in_url
         ])
         return feat_vec
 
@@ -308,7 +315,7 @@ class UrlFeaturizer:
                                       (N, embedding_dim)
         '''
         try:
-            url_data = url_tokenizer(url)
+            url_data = url_tokenizer(url, expand_tokens=self.expand_tokens)
             feat_vec = self.__create_hand_picked_features__(url_data)
             word_matrix = self.__create_word_matrix__(url_data)
             return feat_vec, word_matrix
