@@ -16,7 +16,7 @@ UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
 ACRONYMS = read_token_expansion_dataset()
 
 
-def url_tokenizer(url: str, expand_tokens: bool = False) -> UrlData:
+def url_tokenizer(url: str, expand_tokens: bool = False, reverse_path:bool = False) -> UrlData:
     '''
     Takes a url as a string and returns a 4-tuple of the processed protocol,
     domains, path and arguments.
@@ -41,7 +41,8 @@ def url_tokenizer(url: str, expand_tokens: bool = False) -> UrlData:
     args = url_args_handler(args_raw)
 
     # reversing the path
-    path_reversed = path.reverse()
+    if reverse_path:
+        path = list(reversed(path))
 
     url_data = (protocol, domains, path, args)
 
