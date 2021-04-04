@@ -39,6 +39,10 @@ def url_tokenizer(url: str, expand_tokens: bool = False) -> UrlData:
     domains = url_domains_handler(domains_raw)
     path = url_path_handler(path_raw)
     args = url_args_handler(args_raw)
+
+    # reversing the path
+    path_reversed = path.reverse()
+
     url_data = (protocol, domains, path, args)
 
     if expand_tokens:
