@@ -94,7 +94,7 @@ def url_raw_splitter(url: str) -> Tuple[str]:
         \b
         ([-a-zA-Z0-9()@:%_\+;.~#&//=]*)                 # path
         \??
-        ([-a-zA-Z0-9()@:%_\+;.~#&//=?]*)                # args
+        ([-a-zA-Z0-9()@:%_\+;.~#&//=?\\]*)                # args
     ''', re.DOTALL | re.VERBOSE)
     match = url_regex.match(url.lower())
     assert match, f'Error matching url: {url}'
