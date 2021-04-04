@@ -16,7 +16,8 @@ UrlData = Tuple[str, DomainData, List[str], List[ParamValPair]]
 ACRONYMS = read_token_expansion_dataset()
 
 
-def url_tokenizer(url: str, expand_tokens: bool = False, reverse_path:bool = False) -> UrlData:
+def url_tokenizer(url: str, expand_tokens: bool = False,
+                  reverse_path: bool = False) -> UrlData:
     '''
     Takes a url as a string and returns a 4-tuple of the processed protocol,
     domains, path and arguments.
@@ -24,6 +25,7 @@ def url_tokenizer(url: str, expand_tokens: bool = False, reverse_path:bool = Fal
     Args:
         url (str): Full url of webpage
         expand_tokens (bool): Whether or not word expansion should be used
+        reverse_path (bool): Whether or not the path should be reversed
 
     Returns:
         protocol (str): Protocol, http or https
@@ -37,12 +39,9 @@ def url_tokenizer(url: str, expand_tokens: bool = False, reverse_path:bool = Fal
     url_decoded = url_html_decoder(url)
     protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url_decoded)
     domains = url_domains_handler(domains_raw)
-    path = url_path_handler(path_raw)
+    path_handled = url_path_handler(path_raw)
+    path = reversed(path_handled) if reverse_path else path_handled
     args = url_args_handler(args_raw)
-
-    # reversing the path
-    if reverse_path:
-        path = list(reversed(path))
 
     url_data = (protocol, domains, path, args)
 

@@ -6,7 +6,8 @@ from os.path import dirname, abspath
 from typing import Dict, List, Tuple, Union
 
 from util import flatten, flatten_twice
-from url_tokenizer import url_tokenizer, UrlData, flatten_url_data, url_raw_splitter, url_html_decoder
+from url_tokenizer import url_tokenizer, UrlData, flatten_url_data, \
+                          url_raw_splitter, url_html_decoder
 
 import numpy as np
 import pandas as pd
@@ -20,7 +21,14 @@ SUB_DOMAIN_DEFAULT_MAX_LEN = 5
 MAIN_DOMAIN_DEFAULT_MAX_LEN = 5
 PATH_DEFAULT_MAX_LEN = 10
 ARG_DEFAULT_MAX_LEN = 10
-UNTRUSTWORTHY_TLDS = set(['ga', 'tk', 'ml', 'cf', 'surf', 'su', 'ba', 'cyou', 'support', 'bd', 'th', 'casa', 'pk', 'top', 'id', 'link', 'sa', 'in', 'xyz', 'pw', 'monster', 'ink' 'lk', 'wang', 'cc', 'vn', 'np', 'ec', 'tr', 'shop', 'ge', 'pe', 'ke', 'xn--p1ai', 'buzz', 'ng', 'ir', 'me', 'ma', 'digital', 'at', 'live', 'club', 'services', 'icu', 'cl', 'it', 'pl', 'cam', 'my', 'ru', 'today', 'ae', 'sg'])
+UNTRUSTWORTHY_TLDS = set([
+    'ga', 'tk', 'ml', 'cf', 'surf', 'su', 'ba', 'cyou', 'support', 'bd', 'th',
+    'casa', 'pk', 'top', 'id', 'link', 'sa', 'in', 'xyz', 'pw', 'monster',
+    'ink' 'lk', 'wang', 'cc', 'vn', 'np', 'ec', 'tr', 'shop', 'ge', 'pe',
+    'ke', 'xn--p1ai', 'buzz', 'ng', 'ir', 'me', 'ma', 'digital', 'at', 'live',
+    'club', 'services', 'icu', 'cl', 'it', 'pl', 'cam', 'my', 'ru', 'today',
+    'ae', 'sg'
+])
 
 # These following constants should not be changed
 GLOVE, CONCEPTNET, WORD2VEC, FASTTEXT, SAMPLE = \
@@ -182,7 +190,8 @@ class UrlFeaturizer:
         '''
         sample_url = 'http://test.com'
         sample_url_data = url_tokenizer(sample_url)
-        feat_len = len(self.__create_hand_picked_features__(sample_url, sample_url_data))
+        feat_len = len(self.__create_hand_picked_features__(sample_url,
+                                                            sample_url_data))
         return feat_len
 
     def __get_embed__(self, token: str) -> np.ndarray:
@@ -250,13 +259,14 @@ class UrlFeaturizer:
         ])
         return word_matrix
 
-    def __create_hand_picked_features__(self, url:str, url_data: UrlData) -> np.ndarray:
+    def __create_hand_picked_features__(self, url: str,
+                                        url_data: UrlData) -> np.ndarray:
         '''
         Creates hand-picked features based on the url data
 
         Args:
             url (str): URL string
-            url_data (UrlData): 4-tuple of url data
+            url_data (UrlData): 4-tuple of URL data
 
         Returns:
             feat_vec (np.ndarray): 1D vector of hand-picked features
@@ -264,17 +274,18 @@ class UrlFeaturizer:
         words = flatten_url_data(url_data)
 
         url_decoded = url_html_decoder(url)
-        protocol, domains_raw, path_raw, args_raw = url_raw_splitter(url_decoded)
+        protocol, domains_raw, path_raw, args_raw = \
+            url_raw_splitter(url_decoded)
 
         domain_len = len(domains_raw)
         path_len = len(path_raw)
         args_len = len(args_raw)
 
         dot_count_in_path_and_args = path_raw.count('.') + args_raw.count('.')
-        capital_count = len([char for char in url_decoded
-                                      if char.isupper()])
+        capital_count = len([char for char in url_decoded if char.isupper()])
 
-        domain_is_IP_address = int(re.match(r'(\d+\.){3}\d+', domains_raw) is not None)
+        domain_is_ip_address = int(bool(re.match(r'(\d+\.){3}\d+',
+                                                 domains_raw)))
         contain_suspicious_symbol = int(args_raw.find('\\') >= 0 or
                                         args_raw.find(':') >= 0)
 
@@ -315,7 +326,7 @@ class UrlFeaturizer:
             total_num_digits, contains_at_symbol, word_court_in_url,
             domain_len, path_len, args_len,
             dot_count_in_path_and_args, capital_count,
-            domain_is_IP_address, contain_suspicious_symbol
+            domain_is_ip_address, contain_suspicious_symbol
         ])
         return feat_vec
 
