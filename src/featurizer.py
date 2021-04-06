@@ -6,7 +6,8 @@ from os.path import dirname, abspath
 from typing import Dict, List, Tuple, Union
 
 from util import flatten, flatten_twice
-from url_tokenizer import url_tokenizer, UrlData, flatten_url_data
+from url_tokenizer import url_tokenizer, UrlData, flatten_url_data, \
+                          url_raw_splitter, url_html_decoder
 
 import numpy as np
 import pandas as pd
@@ -20,8 +21,14 @@ SUB_DOMAIN_DEFAULT_MAX_LEN = 5
 MAIN_DOMAIN_DEFAULT_MAX_LEN = 5
 PATH_DEFAULT_MAX_LEN = 10
 ARG_DEFAULT_MAX_LEN = 10
-TRUSTWORTHY_TLDS = set(['com', 'net', 'edu', 'org', 'gov'])
-UNTRUSTWORTHY_TLDS = set(['xyz', 'biz', 'info'])
+UNTRUSTWORTHY_TLDS = set([
+    'ga', 'tk', 'ml', 'cf', 'surf', 'su', 'ba', 'cyou', 'support', 'bd', 'th',
+    'casa', 'pk', 'top', 'id', 'link', 'sa', 'in', 'xyz', 'pw', 'monster',
+    'ink' 'lk', 'wang', 'cc', 'vn', 'np', 'ec', 'tr', 'shop', 'ge', 'pe',
+    'ke', 'xn--p1ai', 'buzz', 'ng', 'ir', 'me', 'ma', 'digital', 'at', 'live',
+    'club', 'services', 'icu', 'cl', 'it', 'pl', 'cam', 'my', 'ru', 'today',
+    'ae', 'sg'
+])
 
 # These following constants should not be changed
 GLOVE, CONCEPTNET, WORD2VEC, FASTTEXT, SAMPLE = \
@@ -181,8 +188,10 @@ class UrlFeaturizer:
         Returns:
             feat_len (int): Length of hand-picked feature vector
         '''
-        sample_url_data = url_tokenizer('http://test.com')
-        feat_len = len(self.__create_hand_picked_features__(sample_url_data))
+        sample_url = 'http://test.com'
+        sample_url_data = url_tokenizer(sample_url)
+        feat_len = len(self.__create_hand_picked_features__(sample_url,
+                                                            sample_url_data))
         return feat_len
 
     def __get_embed__(self, token: str) -> np.ndarray:
@@ -250,17 +259,35 @@ class UrlFeaturizer:
         ])
         return word_matrix
 
-    def __create_hand_picked_features__(self, url_data: UrlData) -> np.ndarray:
+    def __create_hand_picked_features__(self, url: str,
+                                        url_data: UrlData) -> np.ndarray:
         '''
         Creates hand-picked features based on the url data
 
         Args:
-            url_data (UrlData): 4-tuple of url data
+            url (str): URL string
+            url_data (UrlData): 4-tuple of URL data
 
         Returns:
             feat_vec (np.ndarray): 1D vector of hand-picked features
         '''
         words = flatten_url_data(url_data)
+
+        url_decoded = url_html_decoder(url)
+        protocol, domains_raw, path_raw, args_raw = \
+            url_raw_splitter(url_decoded)
+
+        domain_len = len(domains_raw)
+        path_len = len(path_raw)
+        args_len = len(args_raw)
+
+        dot_count_in_path_and_args = path_raw.count('.') + args_raw.count('.')
+        capital_count = len([char for char in url_decoded if char.isupper()])
+
+        domain_is_ip_address = int(bool(re.match(r'(\d+\.){3}\d+',
+                                                 domains_raw)))
+        contain_suspicious_symbol = int(args_raw.find('\\') >= 0 or
+                                        args_raw.find(':') >= 0)
 
         protocol, domains, path, args = url_data
         sub_domains, main_domain, domain_ending = domains
@@ -272,9 +299,8 @@ class UrlFeaturizer:
         is_www = int(num_sub_domains > 0 and sub_domains[0] == 'www')
         is_www_weird = int(num_sub_domains > 0 and
                            bool(re.match(r'www.+', sub_domains[0])))
-        path_len = len(path) - contains_at_symbol
-        domain_end_verdict = (- 1 * (domain_ending in UNTRUSTWORTHY_TLDS)
-                              + 1 * (domain_ending in TRUSTWORTHY_TLDS))
+        num_path_words = len(path) - contains_at_symbol
+        domain_end_verdict = int(domain_ending in UNTRUSTWORTHY_TLDS)
 
         sub_domain_chars = flatten(sub_domains)
         sub_domains_num_digits = len([char for char in sub_domain_chars
@@ -295,9 +321,12 @@ class UrlFeaturizer:
 
         feat_vec = np.array([
             is_https, num_main_domain_words, num_sub_domains,
-            is_www, is_www_weird, path_len, domain_end_verdict,
+            is_www, is_www_weird, num_path_words, domain_end_verdict,
             sub_domains_num_digits, path_num_digits, args_num_digits,
-            total_num_digits, contains_at_symbol, word_court_in_url
+            total_num_digits, contains_at_symbol, word_court_in_url,
+            domain_len, path_len, args_len,
+            dot_count_in_path_and_args, capital_count,
+            domain_is_ip_address, contain_suspicious_symbol
         ])
         return feat_vec
 
@@ -316,7 +345,7 @@ class UrlFeaturizer:
         '''
         try:
             url_data = url_tokenizer(url, expand_tokens=self.expand_tokens)
-            feat_vec = self.__create_hand_picked_features__(url_data)
+            feat_vec = self.__create_hand_picked_features__(url, url_data)
             word_matrix = self.__create_word_matrix__(url_data)
             return feat_vec, word_matrix
         except Exception as e:
