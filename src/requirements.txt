@@ -2,4 +2,4 @@ pandas
 numpy
 wordninja
 pytest
-gensim
+gensim==4.0.1
