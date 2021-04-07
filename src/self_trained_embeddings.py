@@ -1,24 +1,21 @@
-import re
 from typing import List
 
 from gensim.models import Word2Vec
+import pandas as pd
+from tqdm import tqdm
 
 from url_tokenizer import flatten_url_data, url_tokenizer
-from read_data import read_dmoz, read_ilp
-
-import pandas as pd
 
 
 '''
 Examples on how to get the self-trained embedding model.
 
 First, get the pd.DataFrames of the dataset, e.g. dmoz_df. Then,
-embedding = get_embedding(df=dmoz_df,use_sample=True,min_count=2)
-
+embedding = get_embedding(df=dmoz_df, min_count=2)
 '''
 
 
-def sentence_handler_func(df: pd.DataFrame,use_sample: bool = False):
+def sentence_handler_func(df: pd.DataFrame):
     '''
     Cleans and extracts URLs from dataset into the input form.
 
@@ -26,12 +23,13 @@ def sentence_handler_func(df: pd.DataFrame,use_sample: bool = False):
         sentences (List[List[str]]): A list of sentences, where each sentence
             is a list of words from URL dataset.
     '''
-    
-    urls = df['url'].to_numpy()
-    sentences_for_train = [flatten_url_data(url_tokenizer(url))
-                           for url in urls]
-    return sentences_for_train
-
+    sentences = []
+    for url in tqdm(df['url'], desc="Creating sentences"):
+        try:
+            sentences.append(flatten_url_data(url_tokenizer(url)))
+        except AssertionError as error:
+            print(f'{error} - Skipped')
+    return sentences
 
 
 def train_embedding_Word2Vec(sentences: List[List[str]]):
@@ -50,20 +48,18 @@ def train_embedding_Word2Vec(sentences: List[List[str]]):
     return embedding
 
 
-def get_embedding(df: pd.DataFrame, use_sample: bool = False, min_count: int = 2):
+def get_embedding(df: pd.DataFrame, min_count: int = 2):
     '''
     Generate the embedding model for the choosen dataset.
 
     Args:
         df (pd.DataFrame):pd.DataFrames of the dataset.
-        use_sample (bool): Whether to use sample dataset.
         min_count (int): Ignore words that appear less than this when training
             the embedding model.
 
     Returns:
         The embedding model.
     '''
-    
-    sentences = sentence_handler_func(df,use_sample)
+    sentences = sentence_handler_func(df)
     embedding = train_embedding_Word2Vec(sentences)
     return embedding
