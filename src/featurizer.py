@@ -12,8 +12,9 @@ from url_tokenizer import url_tokenizer, UrlData, flatten_url_data, \
 import numpy as np
 import pandas as pd
 import gensim.downloader as api
+from gensim.models.fasttext import FastTextKeyedVectors
 
-EmbeddingIndex = Dict[str, List[float]]
+EmbeddingIndex = Union[Dict[str, List[float]], FastTextKeyedVectors]
 VectorMatrix = Tuple[np.ndarray, np.ndarray]
 
 # Hyperparameters that can be varied
@@ -48,7 +49,7 @@ SAMPLE_FILE = os.path.join(WORD_EMBED_PATH, SAMPLE, 'sample.txt')
 
 class UrlFeaturizer:
     def __init__(self,
-                 embedding: str = CONCEPTNET,
+                 embedding: Union[str, FastTextKeyedVectors] = CONCEPTNET,
                  expand_tokens: bool = False,
                  sub_domain_max_len: int = SUB_DOMAIN_DEFAULT_MAX_LEN,
                  main_domain_max_len: int = MAIN_DOMAIN_DEFAULT_MAX_LEN,
@@ -59,16 +60,17 @@ class UrlFeaturizer:
         Returns a new UrlFeaturizer with the loaded word embedding and settings
 
         Args:
-            embedding (str): The embedding to use, i.e. 'GloVe' or 'Conceptnet'
+            embedding (Union[str, FastTextKeyedVectors]): The embedding to use,
+                i.e. a string like 'GloVe' or 'Conceptnet' or a FastText model
             expand_tokens (bool): Whether or not to perform word expansion
             sub_domain_max_len (int): The length of the sub_domain matrix in
-                                      the generated word matrix
+                the generated word matrix
             main_domain_max_len (int): The length of the main_domain matrix in
-                                       the generated word matrix
+                the generated word matrix
             path_max_len (int): The length of the path matrix in the generated
-                                word matrix
+                word matrix
             arg_max_len (int): The length of the args matrix in the generated
-                               word matrix
+                word matrix
             verbose (bool): Whether or not to print logging messages
 
         Returns:
@@ -83,13 +85,15 @@ class UrlFeaturizer:
         self.path_max_len = path_max_len
         self.arg_max_len = arg_max_len
         self.N = self.__calc_n__()
+        self.is_fasttext = isinstance(embedding, FastTextKeyedVectors)
         self.embeddings_index = self.__read_embeddings__(embedding)
         self.embedding_dim = len(self.__get_embed__('the'))
         self.avg_vec = self.__create_avg_vec__(embedding)
         self.hand_picked_feat_len = self.__hand_picked_feat_len__()
         if self.verbose:
             elapsed = time() - t_start
-            print(f'Created {embedding} UrlFeaturizer in {elapsed:.1f} s')
+            embed_str = 'FastText' if self.is_fasttext else embedding
+            print(f'Created {embed_str} UrlFeaturizer in {elapsed:.1f} s')
 
     def __calc_n__(self):
         '''
@@ -98,25 +102,28 @@ class UrlFeaturizer:
         Returns:
             N (int): Length of word embedding
         '''
-        N = self.sub_domain_max_len + self.main_domain_max_len + 1 + \
-            self.path_max_len + self.arg_max_len
+        N = (self.sub_domain_max_len + self.main_domain_max_len + 1
+             + self.path_max_len + self.arg_max_len)
         return N
 
-    def __read_embeddings__(self, embedding: str) -> EmbeddingIndex:
-
+    def __read_embeddings__(self,
+                            embedding: Union[str, FastTextKeyedVectors]) \
+            -> EmbeddingIndex:
         '''
         Takes the choice of embedding and returns a dictionary with the word
         as key and the word embedding as the value
 
         Args:
-            embedding (str): String, should be one of the keys in
-                             WORD_EMBED_TO_GENSIM_FILE or "sample".
+            embedding (Union[str, FastTextKeyedVectors]): The embedding to use,
+                i.e. a string like 'GloVe' or 'Conceptnet' or a FastText model
 
         Returns:
             embedding (EmbeddingIndex): A string-vector dictionary of the
-                                        embedding
+                embeddings
         '''
-        if embedding in WORD_EMBED_TO_GENSIM_FILE:
+        if self.is_fasttext:
+            return embedding
+        elif embedding in WORD_EMBED_TO_GENSIM_FILE:
             return self.__read_gensim_embeddings__(embedding)
         elif embedding == SAMPLE:
             return self.__read_sample_embeddings__()
@@ -165,7 +172,8 @@ class UrlFeaturizer:
                             for word in words_df.index.values}
         return embeddings_index
 
-    def __create_avg_vec__(self, embedding: str) -> np.ndarray:
+    def __create_avg_vec__(self, embedding: Union[str, FastTextKeyedVectors]) \
+            -> np.ndarray:
         '''
         Creates a vector that is the average of all word vectors
 
@@ -175,10 +183,13 @@ class UrlFeaturizer:
         if self.verbose:
             print('Creating the average vector of all the word vectors...')
 
-        word_matrix = (np.array(list(self.embeddings_index.values()))
+        if self.is_fasttext:  # FastText handles OOV itself
+            return np.zeros(self.embedding_dim)
+
+        word_matrix = (list(self.embeddings_index.values())
                        if embedding == SAMPLE
-                       else np.array(self.embeddings_index.wv.syn0))
-        avg_vec = np.mean(word_matrix, axis=0)
+                       else self.embeddings_index.wv.syn0)
+        avg_vec = np.mean(np.array(word_matrix), axis=0)
         return avg_vec
 
     def __hand_picked_feat_len__(self):
