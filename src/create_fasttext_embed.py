@@ -56,9 +56,7 @@ def main():
         print(dataset_str)
         corpus_file = create_corpus_file(dataset_str)
         model = create_model_from_corpus(corpus_file)
-        wv_lookup_dataset = model.wv
-        with open(f'embed-{dataset_str}.pickle', 'wb') as f:
-            pickle.dump(wv_lookup_dataset, f)
+        model.wv.save(f'embed-{dataset_str}.model')
 
 
 if __name__ == '__main__':
