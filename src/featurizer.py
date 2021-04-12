@@ -55,6 +55,7 @@ class UrlFeaturizer:
                  main_domain_max_len: int = MAIN_DOMAIN_DEFAULT_MAX_LEN,
                  path_max_len: int = PATH_DEFAULT_MAX_LEN,
                  arg_max_len: int = ARG_DEFAULT_MAX_LEN,
+                 is_sequential: bool = False,
                  verbose: bool = True):
         '''
         Returns a new UrlFeaturizer with the loaded word embedding and settings
@@ -71,6 +72,8 @@ class UrlFeaturizer:
                 word matrix
             arg_max_len (int): The length of the args matrix in the generated
                 word matrix
+            is_sequential (bool): Whether to use sequential embedding or
+                positional embedding
             verbose (bool): Whether or not to print logging messages
 
         Returns:
@@ -78,6 +81,9 @@ class UrlFeaturizer:
         '''
         t_start = time()
         self.verbose = verbose
+        self.__create_word_matrix__ = (
+            self.__create_sequential_word_matrix__ if is_sequential
+            else self.__create_positional_word_matrix__)
         self.expand_tokens = expand_tokens
         self.embed_prefix = ''
         self.sub_domain_max_len = sub_domain_max_len
@@ -245,17 +251,21 @@ class UrlFeaturizer:
             embed_matrix[i] = self.__get_embed__(token)
         return embed_matrix
 
-    def __create_word_matrix__(self, url_data: UrlData) -> np.ndarray:
+    def __create_positional_word_matrix__(self, url_data: UrlData) \
+            -> np.ndarray:
         '''
         Takes the url_date and creates a full word embedding from this of shape
         (N, embedding_dim), where N is equal to the sum of the lengths of
-        the sub_domains, main_domains, paths, args + 1 for the TLD
+        the sub_domains, main_domains, paths, args + 1 for the TLD. The
+        embedding will be positional, meaning it will have the embed vectors
+        for each area of the URL starting at fixed locations and truncated
+        to fixed lengths. I.e. [0, 0, x, y, 0, 0, d, f, 0, ...]
 
         Args:
             url_data (UrlData): 4-tuple of url data
 
         Returns:
-            word_matrix (np.ndarray): Full word embedding matrix of
+            word_matrix (np.ndarray): Full positional word embedding matrix of
                                       shape (N, embedding_dim)
         '''
         _, domains, path, args = url_data
@@ -272,6 +282,30 @@ class UrlFeaturizer:
             domain_end_vec,
             path_mat, args_mat
         ])
+        return word_matrix
+
+    def __create_sequential_word_matrix__(self, url_data: UrlData) \
+            -> np.ndarray:
+        '''
+        Takes the url_date and creates a full word embedding from this of shape
+        (N, embedding_dim), where N is equal to the sum of the lengths of
+        the sub_domains, main_domains, paths, args + 1 for the TLD. The
+        embedding will be sequential, meaning it will have the embed vectors
+        for each word at the beginning and then padded/truncated to fixed
+        length N. I.e. [x, y, z, k, d, v, f, 0, 0, 0, ...]
+
+        Args:
+            url_data (UrlData): 4-tuple of url data
+
+        Returns:
+            word_matrix (np.ndarray): Full sequential word embedding matrix of
+                                      shape (N, embedding_dim)
+        '''
+        _, domains, path, args = url_data
+        sub_domains, main_domain, domain_ending = domains
+        args_flat = flatten_twice(args)
+        full = sub_domains + main_domain + [domain_ending] + path + args_flat
+        word_matrix = self.__word_embed__(full, self.N)
         return word_matrix
 
     def __create_hand_picked_features__(self, url: str,
