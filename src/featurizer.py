@@ -128,7 +128,11 @@ class UrlFeaturizer:
         elif embedding == SAMPLE:
             return self.__read_sample_embeddings__()
         else:
-            raise ValueError(f'{embedding} is not a valid embedding choice.')
+            valid_choices = list(WORD_EMBED_TO_GENSIM_FILE.keys())
+            valid_choices.append(SAMPLE)
+            msg = (f'"{embedding}" is not a valid embedding choice. Try one ' +
+                   f'of {valid_choices} or a FastTextKeyedVectors model')
+            raise ValueError(msg)
 
     def __read_gensim_embeddings__(self, embedding: str) -> EmbeddingIndex:
         '''
@@ -188,7 +192,7 @@ class UrlFeaturizer:
 
         word_matrix = (list(self.embeddings_index.values())
                        if embedding == SAMPLE
-                       else self.embeddings_index.wv.syn0)
+                       else self.embeddings_index.vectors)
         avg_vec = np.mean(np.array(word_matrix), axis=0)
         return avg_vec
 
