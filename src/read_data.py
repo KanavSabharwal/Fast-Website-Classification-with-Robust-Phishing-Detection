@@ -87,6 +87,8 @@ def read_ilp(use_sample=False) -> pd.DataFrame:
                     if url.startswith('http')]
             for url in urls:
                 replaced_url = url.replace('^', '/')
+                replaced_url = replaced_url.replace('http_', 'http:')
+                replaced_url = replaced_url.replace('https_', 'https:')
                 data.append([idx, replaced_url, label, uni])
                 idx += 1
     df = pd.DataFrame(data, columns=['idx', 'url', 'label', 'uni'])
