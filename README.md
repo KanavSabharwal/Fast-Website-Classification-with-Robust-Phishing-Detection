@@ -19,7 +19,7 @@ Before you can actually run most of the code, you need to download and organize 
 
 ### Reading the data
 
-The datasets we use are structured in different ways. To streamline the code, they are all read and converted into the same format which is a DataFrame with the columns `[idx, url, label]`. The ILP dataset furthermore contains `uni` but we ended up not using this column in any of our code. The code for reading the data is located in `read_data.py`.
+The datasets we use are structured in different ways. To streamline the code, they are all read and converted into the same format which is a DataFrame with the columns `[idx, url, label]`. The ILP dataset furthermore contains an `uni`-column but we ended up not using this in any of our code. The code for reading the data is located in `read_data.py`.
 
 
 ### Pre-processing
@@ -42,15 +42,13 @@ The main pre-processing code is located in the following files:
 * `pickle_data.py`: Data to pickle the datasets. Was used to store on Google Drive to then easily read for usage in Google Colab.
 * `self_trained_embeddings.py`: Trains FastText embeddings for the different datasets and writes them to disk. Was also uploaded to Google Drive for easy use in Goolge Colab.
 * `run_feat_experiments.ipynb`: Runs experiments on a Random Forest baseline model to see which hand-picked features matter the most.
+* `run_embed_comparison.ipynb`: The code used to get the comparision scores for different word embeddings ont the ILP dataset.
 
 
 ### Baselines
 
 The baselines and plotting code for comparisons can be found in the `baselines`-folder.
 
-### Word Embedding Comparision
-
-The code used to get the comparision scores for different word embeddings can be found in `Comparing_Embeddings`-folder.
 
 ### Models
 
