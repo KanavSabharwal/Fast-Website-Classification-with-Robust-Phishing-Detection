@@ -25,8 +25,6 @@ data/
 				# more files with the url as filename
 			# misc, texas, washington, wisconsin
 		# department, faculty, other, project, staff, student
-	webkb_sample/	
-		# similar structure as above
 ```
 
 
@@ -38,11 +36,3 @@ The datasets can be obtained from:
 * Phishing etc.: <https://www.unb.ca/cic/datasets/url-2016.html>
 * Phishing extra: <https://www.phishtank.com/developer_info.php>
 * DMOZ - Open Directory Project Web (Kaggle URL Classification): <https://www.kaggle.com/shawon10/url-classification-dataset-dmoz>
-
-
-## Additional Datasets
-
-At the moment, we have no plans to use these datasets.
-
-* Website Phising Data Set (Does not contain actual URL): <http://archive.ics.uci.edu/ml/datasets/Website+Phishing>
-* ANT: <https://ant.isi.edu/datasets/>
