@@ -48,6 +48,9 @@ The main pre-processing code is located in the following files:
 
 The baselines and plotting code for comparisons can be found in the `baselines`-folder.
 
+### Word Embedding Comparision
+
+The code used to get the comparision scores for different word embeddings can be found in `Comparing_Embeddings`-folder.
 
 ### Models
 
