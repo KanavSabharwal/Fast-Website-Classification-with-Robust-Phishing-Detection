@@ -1,6 +1,9 @@
-# NLP Project
+# NLP Project - Fast Webpage Classification with Robust Phishing Detection
 
-Predicting webpages without the actual webpage.
+Predicting webpages without the actual webpage. Project accessible at <https://github.com/shmulvad/nlp-project>. Summary of project:
+
+[![summary](./img/poster.jpg)](./img/poster.pdf)
+
 
 
 ## Getting started with the code
@@ -26,9 +29,9 @@ The datasets we use are structured in different ways. To streamline the code, th
 
 The main pre-processing code is located in the following files:
 
-* `util.py`: Helper functions.
-* `url_tokenizer.py`: Takes care of the tokenization of URLs and optionally reversing the path, multiword token expansion and acronym expansion.
-* `featurizer.py`: Contains the class for `UrlFeaturizer` which can be initialized with a given word embedding. Used in the following way:
+* [`util.py`][util]: Helper functions.
+* [`url_tokenizer.py`][tokenizer]: Takes care of the tokenization of URLs and optionally reversing the path, multiword token expansion and acronym expansion.
+* [`featurizer.py`][featurizer]: Contains the class for `UrlFeaturizer` which can be initialized with a given word embedding. Used in the following way:
 
 ```python
 >>> from featurizer import UrlFeaturizer
@@ -39,28 +42,28 @@ The main pre-processing code is located in the following files:
 
 ### One-off code
 
-* `pickle_data.py`: Data to pickle the datasets. Was used to store on Google Drive to then easily read for usage in Google Colab.
-* `self_trained_embeddings.py`: Trains FastText embeddings for the different datasets and writes them to disk. Was also uploaded to Google Drive for easy use in Goolge Colab.
-* `run_feat_experiments.ipynb`: Runs experiments on a Random Forest baseline model to see which hand-picked features matter the most.
-* `run_embed_comparison.ipynb`: The code used to get the comparision scores for different word embeddings ont the ILP dataset.
+* [`pickle_data.py`][pickle_data]: Data to pickle the datasets. Was used to store on Google Drive to then easily read for usage in Google Colab.
+* [`self_trained_embeddings.py`][self_trained_embeddings]: Trains FastText embeddings for the different datasets and writes them to disk. Was also uploaded to Google Drive for easy use in Goolge Colab.
+* [`run_feat_experiments.ipynb`][run_feat_experiments]: Runs experiments on a Random Forest baseline model to see which hand-picked features matter the most.
+* [`run_embed_comparison.ipynb`][run_embed_comparison]: The code used to get the comparision scores for different word embeddings ont the ILP dataset.
 
 
 ### Baselines
 
-The baselines and plotting code for comparisons can be found in the `baselines`-folder.
+The baselines and plotting code for comparisons can be found in the [`baselines`][baselines]-folder.
 
 
 ### Models
 
-The models are designed to be run on Google Colab and should be able to be run "as is". We have not tested whether they can run locally in an environment without GPU.
+The models are designed to be run on Google Colab and should be able to be run "as is" if uploaded. Note that they `!gdown` files we have stored on Google Drive. We do not guarantee these files will be available for all eternity. In that case, all the files used can be generated with the code here.
 
-* `SDEM.ipynb`: SDEM model.
-* `DURC.ipynb`: DURC model (final model). 
+* [`SDEM.ipynb`][sdem]: SDEM model.
+* [`DURC.ipynb`][durc]: DURC model (final model). 
 
 
 ### Example
 
-`demo.ipynb` shows some basic examples of how to read the data, the tokenization of the URLs, the initialization of the `UrlFeaturizer` and an example of returned output.
+[`demo.ipynb`][demo] shows some basic examples of how to read the data, the tokenization of the URLs, the initialization of the `UrlFeaturizer` and an example of returned output.
 
 
 ## Testing
@@ -75,3 +78,17 @@ to run all tests.
 
 
 [data-readme]: ./src/data/README.md
+[util]: ./src/util.py
+[tokenizer]: ./src/url_tokenizer.py
+[featurizer]: ./src/featurizer.py
+
+[pickle_data]: ./src/pickle_data.py
+[self_trained_embeddings]: ./src/self_trained_embeddings.py
+[run_feat_experiments]: ./src/run_feat_experiments.ipynb
+[run_embed_comparison]: ./src/run_embed_comparison.ipynb
+
+[baselines]: ./src/baselines
+[sdem]: ./src/models/SDEM.ipynb
+[durc]: ./src/models/DURC.ipynb
+
+[demo]: ./src/demo.ipynb
